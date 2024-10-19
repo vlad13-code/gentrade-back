@@ -1,0 +1,30 @@
+[project]
+name = "gentrade-back"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]~=0.115.0",
+    "httpx ~=0.26.0",
+    "langchain-core ~=0.3.0",
+    "langchain-community ~=0.3.0",
+    "langchain-openai ~=0.2.0",
+    "langchain-groq ~=0.2.0",
+    "langchain-google-genai ~=2.0.0",
+    "langchain-anthropic ~= 0.2.0",
+    "langgraph ~=0.2.22",
+    "langgraph-checkpoint ~=2.0.0",
+    "langgraph-checkpoint-sqlite ~=2.0.0",
+    "langsmith ~=0.1.96",
+    "numexpr ~=2.10.1",
+    "pydantic ~=2.9.0",
+    "pyowm ~=3.3.0",
+    "python-dotenv ~=1.0.1",
+    "setuptools ~=74.0.0",
+    "uvicorn ~=0.30.5",
+    "jwt[crypto]>=1.3.1",
+    "pyjwt[crypto]>=2.9.0",
+    "langserve>=0.3.0",
+    "sse-starlette>=2.1.3",
+]
