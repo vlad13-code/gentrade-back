@@ -1,5 +1,3 @@
-import sys
-
 from dotenv import find_dotenv, load_dotenv
 from pydantic_settings import BaseSettings
 
@@ -7,7 +5,7 @@ from pydantic_settings import BaseSettings
 # env_file = ".env.debug" if "dev_environment" in sys.argv else ".env"
 env_file = ".env"
 
-load_dotenv(find_dotenv(env_file))
+load_dotenv(find_dotenv(env_file), override=True)
 
 
 class Settings(BaseSettings):
@@ -39,6 +37,10 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL_psycopg(self):
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def DATABASE_URL_asyncpg_pool(self):
+        return f"postgresql://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?sslmode=disable"
 
 
 settings = Settings()

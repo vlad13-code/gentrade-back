@@ -11,6 +11,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.managed import IsLastStep
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.store.base import BaseStore
+from langgraph.checkpoint.memory import MemorySaver
 
 from app.agents.main.prompts.base import instructions
 from app.agents.main.tools.calculator import calculator
@@ -51,9 +53,13 @@ def wrap_model(model: BaseChatModel) -> RunnableSerializable[AgentState, AIMessa
     return preprocessor | model
 
 
-async def acall_model(state: AgentState, config: RunnableConfig) -> AgentState:
+async def acall_model(
+    state: AgentState, config: RunnableConfig, *, store: BaseStore
+) -> AgentState:
     m = models[config["configurable"].get("model", "gpt-4o-mini")]
     model_runnable = wrap_model(m)
+    # user_id = config["configurable"]["user_id"]
+    # namespace = ("memories", user_id)
     response = await model_runnable.ainvoke(state, config)
 
     if state["is_last_step"] and response.tool_calls:
@@ -78,7 +84,7 @@ agent.add_conditional_edges(
     tools_condition,
 )
 agent.set_entry_point("model")
-agent.add_edge("tools", "model")
+# agent.add_edge("tools", "model")
 
 
 # After "model", if there are tool calls, run "tools". Otherwise END.
@@ -96,7 +102,8 @@ agent.add_conditional_edges(
 )
 agent.add_edge("model", END)
 
-graph_main = agent.compile()
+
+graph_main = agent.compile(checkpointer=MemorySaver())
 
 
 if __name__ == "__main__":
