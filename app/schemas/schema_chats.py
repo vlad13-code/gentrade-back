@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 
-class ChatSchemaAdd(BaseModel):
+class ChatSchemaAddUpdate(BaseModel):
     messages: list[dict]
     thread_id: str | UUID
     user_id: Optional[int] = Field(
@@ -12,7 +12,7 @@ class ChatSchemaAdd(BaseModel):
     )  # Optional because it's added in the router, not in the request. We're getting it from UserAuthDep
 
 
-class ChatSchema(ChatSchemaAdd):
+class ChatSchema(ChatSchemaAddUpdate):
     id: int
     messages: list[dict]
     createdAt: datetime

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import insert, select, update, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -47,3 +47,13 @@ class SQLAlchemyRepository(AbstractRepository):
         res = await self.session.execute(stmt)
         res = res.scalar_one()
         return res
+
+    async def find_all_by_ordered(self, order_by, order_direction="asc", **filter_by):
+        if order_direction == "asc":
+            order_clause = asc(order_by)
+        else:
+            order_clause = desc(order_by)
+
+        stmt = select(self.model).filter_by(**filter_by).order_by(order_clause)
+        res = await self.session.execute(stmt)
+        return res.scalars().all()

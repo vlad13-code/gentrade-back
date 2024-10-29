@@ -12,13 +12,14 @@ class ChatsORM(Base):
     __tablename__ = "chats"
 
     id: Mapped[intpk]
+    thread_id = mapped_column(UUID(as_uuid=True), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    messages = mapped_column(JSON)
+
     createdAt: Mapped[created_at]
     updatedAt: Mapped[updated_at]
-    messages = mapped_column(JSON)
-    thread_id = mapped_column(UUID(as_uuid=True))
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
 
     user = relationship("UsersORM", back_populates="chats")
 
     def __repr__(self):
-        return f"<Chat id={self.id}, createdAt={self.createdAt}, userId={self.userId}>"
+        return f"<ChatsORM id={self.id}, thread_id={self.thread_id}, user_id={self.user_id} createdAt={self.createdAt},>"

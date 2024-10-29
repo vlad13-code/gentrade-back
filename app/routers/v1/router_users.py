@@ -37,7 +37,7 @@ class UserAlreadyExists(BaseModel):
 async def add_user(user: UserSchemaAdd, uow: UOWDep, response: Response):
     try:
         user_id = await UsersService().add_user(uow, user)
-    except IntegrityError:
+    except IntegrityError as e:
         response.status_code = status.HTTP_200_OK
         return UserAlreadyExists()
 

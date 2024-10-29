@@ -4,7 +4,7 @@ from fastapi import APIRouter, Response, status
 from app.dependencies import UOWDep, UserAuthDep
 from app.schemas.schema_chats import (
     ChatListItem,
-    ChatSchemaAdd,
+    ChatSchemaAddUpdate,
     ChatSchema,
     ResponseChatAdded,
     ResponseChatNotFound,
@@ -30,15 +30,34 @@ router = APIRouter(
     summary="Add a new chat history",
 )
 async def add_chat(
-    chat: ChatSchemaAdd, uow: UOWDep, user: UserAuthDep, response: Response
+    chat: ChatSchemaAddUpdate, uow: UOWDep, user: UserAuthDep, response: Response
 ):
-    chat_id = await ChatsService().add_or_update_chat(uow, chat, user)
+    chat_id = await ChatsService().add_chat(uow, chat, user)
     if not chat_id:
         response.status_code = status.HTTP_404_NOT_FOUND
         return ResponseUserNotFound()
 
     response.status_code = status.HTTP_201_CREATED
     return ResponseChatAdded(chat_id=chat_id)
+
+
+@router.patch(
+    "",
+    status_code=status.HTTP_200_OK,
+    responses={status.HTTP_200_OK: {"model": ChatSchema}},
+    summary="Update a chat history by id",
+)
+async def update_chat(
+    chat: ChatSchemaAddUpdate,
+    uow: UOWDep,
+    user: UserAuthDep,
+    response: Response,
+):
+    updated_chat = await ChatsService().update_chat(uow, chat, user)
+    if not updated_chat:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ResponseChatNotFound()
+    return updated_chat
 
 
 @router.get(

@@ -10,11 +10,12 @@ class UsersORM(Base):
     __tablename__ = "users"
 
     id: Mapped[intpk]
-    createdAt: Mapped[created_at]
-    updatedAt: Mapped[updated_at]
-    clerk_id: Mapped[str] = Column(String, unique=True, primary_key=True)
     name: Mapped[Optional[str]]
     email: Mapped[Optional[str]]
+    clerk_id: Mapped[str] = Column(String, unique=True)
+
+    createdAt: Mapped[created_at]
+    updatedAt: Mapped[updated_at]
 
     chats = relationship("ChatsORM", back_populates="user")
 

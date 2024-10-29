@@ -9,6 +9,7 @@ class UserSchemaAuth(BaseModel):
 
 class UserSchemaAdd(UserSchemaAuth):
     name: Optional[str]
+    email: Optional[str]
 
 
 class UserSchema(UserSchemaAuth):
