@@ -12,6 +12,7 @@ class ChatsORM(Base):
     __tablename__ = "chats"
 
     id: Mapped[intpk]
+    title: Mapped[str]
     thread_id = mapped_column(UUID(as_uuid=True), unique=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     messages = mapped_column(JSON)
