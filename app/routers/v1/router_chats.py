@@ -83,3 +83,22 @@ async def get_chat(uow: UOWDep, thread_id: str, response: Response):
         response.status_code = status.HTTP_404_NOT_FOUND
         return ResponseChatNotFound()
     return chat
+
+
+@router.delete(
+    "/{thread_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {"description": "Chat deleted successfully"},
+        status.HTTP_404_NOT_FOUND: {"model": ResponseChatNotFound},
+    },
+    summary="Delete a chat history by id",
+)
+async def delete_chat(
+    uow: UOWDep, thread_id: str, response: Response, user: UserAuthDep
+):
+    success = await ChatsService().delete_chat(uow, thread_id, user)
+    if not success:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ResponseChatNotFound()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
