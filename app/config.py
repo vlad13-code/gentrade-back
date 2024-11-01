@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     GEOCODE_API_KEY: str
     MODE: str
     CLERK_JWT_KEY: str
+    WH_SECRET: str
 
     class Config:
         env_file = env_file

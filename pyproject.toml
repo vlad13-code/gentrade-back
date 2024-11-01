@@ -32,4 +32,8 @@ dependencies = [
     "greenlet>=3.1.1",
     "psycopg>=3.2.3",
     "alembic>=1.13.3",
+    "python-on-whales>=0.73.0",
+    "celery>=5.4.0",
+    "flower>=2.0.1",
+    "svix>=1.38.0",
 ]

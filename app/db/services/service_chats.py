@@ -1,6 +1,6 @@
 # pylint: disable=import-error
 from app.db.models.chats import ChatsORM
-from app.db.models.users import UsersORM
+from app.db.services.service_users import UsersService
 from app.schemas.schema_chats import ChatSchemaAddUpdate, ChatSchema, ChatListItem
 from app.schemas.schema_users import UserSchemaAuth
 from app.db.utils.unitofwork import IUnitOfWork
@@ -8,27 +8,6 @@ import logging
 
 
 class ChatsService:
-    async def _get_user_by_clerk_id(
-        self, uow: IUnitOfWork, clerk_id: str
-    ) -> UsersORM | None:
-        """
-        Retrieve a user by their clerk ID.
-
-        Args:
-            uow (IUnitOfWork): The unit of work for database operations.
-            clerk_id (str): The clerk ID of the user.
-
-        Returns:
-            UsersORM | None: The user object if found, otherwise None.
-        """
-        try:
-            user = await uow.users.find_one(clerk_id=clerk_id)
-            return user
-        except Exception as e:
-            logging.error(f"Error finding user with clerk_id {clerk_id}: {e}")
-
-        return None
-
     async def add_chat(
         self, uow: IUnitOfWork, chat: ChatSchemaAddUpdate, user: UserSchemaAuth
     ) -> int | None:
@@ -44,7 +23,7 @@ class ChatsService:
             int: The ID of the newly added chat, or None if an error occurred.
         """
         async with uow:
-            user = await self._get_user_by_clerk_id(uow, user.clerk_id)
+            user = await UsersService()._get_user_by_clerk_id(uow, user.clerk_id)
             if not user:
                 return None
 
@@ -73,7 +52,7 @@ class ChatsService:
             int: The ID of the updated chat, or None if an error occurred.
         """
         async with uow:
-            user = await self._get_user_by_clerk_id(uow, user.clerk_id)
+            user = await UsersService()._get_user_by_clerk_id(uow, user.clerk_id)
             if not user:
                 return None
 
@@ -90,30 +69,6 @@ class ChatsService:
                 logging.error(f"Error updating chat: {e}")
                 return None
 
-    async def get_chats(
-        self, uow: IUnitOfWork, clerk_id: str
-    ) -> list[ChatSchema] | None:
-        """
-        Retrieve all chats for a given user.
-
-        Args:
-            uow (IUnitOfWork): The unit of work for database operations.
-            clerk_id (str): The clerk ID of the user.
-
-        Returns:
-            list[ChatSchema]: A list of chat schemas for the user.
-        """
-        async with uow:
-            try:
-                chats = await uow.chats.find_all_by(user_id=clerk_id)
-                return [
-                    ChatSchema.model_validate(chat, from_attributes=True)
-                    for chat in chats
-                ]
-            except Exception as e:
-                logging.error(f"Error retrieving chats for clerk_id {clerk_id}: {e}")
-                return []
-
     async def get_chat_list(
         self, uow: IUnitOfWork, clerk_id: str
     ) -> list[ChatListItem] | None:
@@ -128,7 +83,7 @@ class ChatsService:
             list[ChatListItem]: A list of chat list items for the user.
         """
         async with uow:
-            user = await self._get_user_by_clerk_id(uow, clerk_id)
+            user = await UsersService()._get_user_by_clerk_id(uow, clerk_id)
             if not user:
                 return []
 
@@ -180,7 +135,7 @@ class ChatsService:
             bool: True if the chat was successfully deleted, False otherwise.
         """
         async with uow:
-            user = await self._get_user_by_clerk_id(uow, user.clerk_id)
+            user = await UsersService()._get_user_by_clerk_id(uow, user.clerk_id)
             if not user:
                 return False
 

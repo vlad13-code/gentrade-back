@@ -32,6 +32,19 @@ router = APIRouter(
 async def add_chat(
     chat: ChatSchemaAddUpdate, uow: UOWDep, user: UserAuthDep, response: Response
 ):
+    """
+    Add a new chat history.
+
+    Args:
+        chat (ChatSchemaAddUpdate): The chat data to add.
+        uow (UOWDep): Unit of work dependency.
+        user (UserAuthDep): User authentication dependency.
+        response (Response): FastAPI response object.
+
+    Returns:
+        ResponseChatAdded: If the chat is added successfully.
+        ResponseUserNotFound: If the chat could not be added.
+    """
     chat_id = await ChatsService().add_chat(uow, chat, user)
     if not chat_id:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -53,6 +66,19 @@ async def update_chat(
     user: UserAuthDep,
     response: Response,
 ):
+    """
+    Update a chat history by id.
+
+    Args:
+        chat (ChatSchemaAddUpdate): The chat data to update.
+        uow (UOWDep): Unit of work dependency.
+        user (UserAuthDep): User authentication dependency.
+        response (Response): FastAPI response object.
+
+    Returns:
+        ChatSchema: The updated chat data.
+        ResponseChatNotFound: If the chat could not be found.
+    """
     updated_chat = await ChatsService().update_chat(uow, chat, user)
     if not updated_chat:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -67,6 +93,17 @@ async def update_chat(
     summary="Get all chats histories for the current user. No messages, only ids and timestamps",
 )
 async def get_chat_list(uow: UOWDep, response: Response, user: UserAuthDep):
+    """
+    Get all chat histories for the current user.
+
+    Args:
+        uow (UOWDep): Unit of work dependency.
+        response (Response): FastAPI response object.
+        user (UserAuthDep): User authentication dependency.
+
+    Returns:
+        list[ChatListItem]: List of chat items with ids and timestamps.
+    """
     chats = await ChatsService().get_chat_list(uow, user.clerk_id)
     return chats
 
@@ -77,7 +114,19 @@ async def get_chat_list(uow: UOWDep, response: Response, user: UserAuthDep):
     responses={status.HTTP_200_OK: {"model": ChatSchema}},
     summary="Get a chat history by id",
 )
-async def get_chat(uow: UOWDep, thread_id: str, response: Response):
+async def get_chat(uow: UOWDep, thread_id: str, response: Response, user: UserAuthDep):
+    """
+    Get a chat history by id.
+
+    Args:
+        uow (UOWDep): Unit of work dependency.
+        thread_id (str): The id of the chat thread.
+        response (Response): FastAPI response object.
+
+    Returns:
+        ChatSchema: The chat data.
+        ResponseChatNotFound: If the chat could not be found.
+    """
     chat = await ChatsService().get_chat(uow, thread_id)
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -97,6 +146,18 @@ async def get_chat(uow: UOWDep, thread_id: str, response: Response):
 async def delete_chat(
     uow: UOWDep, thread_id: str, response: Response, user: UserAuthDep
 ):
+    """
+    Delete a chat history by id.
+
+    Args:
+        uow (UOWDep): Unit of work dependency.
+        thread_id (str): The id of the chat thread.
+        response (Response): FastAPI response object.
+        user (UserAuthDep): User authentication dependency.
+
+    Returns:
+        Response: HTTP 204 if successful, ResponseChatNotFound if not found.
+    """
     success = await ChatsService().delete_chat(uow, thread_id, user)
     if not success:
         response.status_code = status.HTTP_404_NOT_FOUND

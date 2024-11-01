@@ -46,8 +46,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             kwargs=connection_kwargs,
         ) as pool:
             checkpointer = AsyncPostgresSaver(pool)
-            # Uncomment if setup is necessary
-            await checkpointer.setup()
             graph_main.checkpointer = checkpointer
             app.state.agent = graph_main
             yield  # Yield control back to the application
@@ -66,15 +64,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
     )
-
-
-# async def check_auth_modify_config(config: dict, request: Request) -> dict:
-#     if app.state.session:
-#         config["configurable"]["user_id"] = app.state.session["sub"]
-#         config["configurable"]["thread_id"] = app.state.session["sid"]
-#         config["configurable"]["run_id"] = str(uuid.uuid4())
-#         print(config["configurable"]["thread_id"])
-#     return config
 
 
 async def check_thread_id(config: dict, request: Request):
