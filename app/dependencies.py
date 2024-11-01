@@ -1,41 +1,26 @@
-import jwt
 from typing import Annotated
 
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi import HTTPException, Depends, status
+from fastapi import Depends
+
+from fastapi_clerk_auth import (
+    ClerkConfig,
+    ClerkHTTPBearer,
+    HTTPAuthorizationCredentials,
+)
 
 from app.db.utils.unitofwork import IUnitOfWork, UnitOfWork
 from app.schemas.schema_users import UserSchemaAuth
 from app.config import settings
 
 
-async def check_auth(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())]
-) -> UserSchemaAuth:
-    if not settings.CLERK_JWT_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Something went wrong",
-        )
+clerk_config = ClerkConfig(jwks_url=settings.CLERK_JWKS_URL)
+clerk_auth_guard = ClerkHTTPBearer(config=clerk_config)
 
-    if bearer := credentials.credentials:
-        try:
-            session = jwt.decode(
-                bearer,
-                key=settings.CLERK_JWT_KEY,
-                leeway=1000000,
-                algorithms=["RS256"],
-            )
-            return UserSchemaAuth(clerk_id=session["sub"])
-        except jwt.exceptions.PyJWTError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate user",
-            )
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate user",
-    )
+
+async def check_auth(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(clerk_auth_guard)]
+):
+    return UserSchemaAuth(clerk_id=credentials.decoded["sub"])
 
 
 UOWDep = Annotated[IUnitOfWork, Depends(UnitOfWork)]
