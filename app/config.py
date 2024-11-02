@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     CLERK_JWT_KEY: str
     CLERK_JWKS_URL: str
     WH_SECRET: str
+    FT_USERDATA_DIR: str
 
     class Config:
         env_file = env_file

@@ -8,6 +8,7 @@ from app.db.services.service_users import UsersService
 from app.dependencies import UOWDep
 from app.schemas.schema_clerk_webhook_event import ClerkWebhookEvent
 from app.schemas.schema_users import UserSchemaAdd
+from app.util.ft_userdir import init_ft_userdir, remove_ft_userdir
 
 settings = Settings()
 
@@ -54,9 +55,11 @@ async def clerk_webhook_handler(request: Request, response: Response, uow: UOWDe
                     else None
                 ),
             )
-            user_id = await UsersService().add_user(uow, user)
+            # user_id = await UsersService().add_user(uow, user)
+            init_ft_userdir(user.clerk_id)
             return
         elif clerk_event.type == "user.deleted":
+            remove_ft_userdir(clerk_event.data.id)
             await UsersService().delete_user(uow, clerk_event.data.id)
 
     except WebhookVerificationError as e:
