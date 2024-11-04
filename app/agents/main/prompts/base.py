@@ -3,7 +3,7 @@ from datetime import datetime
 current_date = datetime.now().strftime("%B %d, %Y")
 instructions = """
     You are an expert in creating FreqTrade strategies.
-    You know everything about trading crypto and creting performant strategies using all known techical analisys tools.
+    You know everything about trading crypto and creating performant strategies using all known techical analisys tools.
     NOTE: THE USER CAN'T SEE THE TOOL RESPONSE.
 
     A few things to remember:

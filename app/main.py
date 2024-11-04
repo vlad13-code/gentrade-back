@@ -66,6 +66,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+# TODO: Add checking for a human feedback here and update the state if needed. Decide doing it here or in the deps
 async def check_thread_id(config: dict, request: Request):
     if "threadid" in request.headers:
         config["configurable"]["thread_id"] = request.headers["threadid"]

@@ -58,8 +58,6 @@ async def acall_model(
 ) -> AgentState:
     m = models[config["configurable"].get("model", "gpt-4o-mini")]
     model_runnable = wrap_model(m)
-    # user_id = config["configurable"]["user_id"]
-    # namespace = ("memories", user_id)
     response = await model_runnable.ainvoke(state, config)
 
     if state["is_last_step"] and response.tool_calls:
@@ -71,8 +69,7 @@ async def acall_model(
                 )
             ]
         }
-    # We return a list, because this will get added to the existing list
-    return {"messages": [response], "result": str(response.content)}
+    return {"messages": [response]}
 
 
 # Define the graph
@@ -115,12 +112,14 @@ if __name__ == "__main__":
     load_dotenv()
 
     async def main() -> None:
-        inputs = {"messages": [("user", "Find me a recipe for chocolate chip cookies")]}
-        result = await graph_main.ainvoke(
-            inputs,
-            config=RunnableConfig(configurable={"thread_id": uuid4()}),
-        )
-        result["messages"][-1].pretty_print()
+        from IPython.display import Image, display
+
+        # inputs = {"messages": [("user", "Find me a recipe for chocolate chip cookies")]}
+        # result = await graph_main.ainvoke(
+        #     inputs,
+        #     config=RunnableConfig(configurable={"thread_id": uuid4()}),
+        # )
+        # result["messages"][-1].pretty_print()
 
         # Draw the agent graph as png
         # requires:
@@ -129,6 +128,6 @@ if __name__ == "__main__":
         # export LDFLAGS="-L $(brew --prefix graphviz)/lib"
         # pip install pygraphviz
         #
-        # research_assistant.get_graph().draw_png("agent_diagram.png")
+        graph_main.get_graph(xray=1).draw_mermaid_png(output_file_path="graph_main.png")
 
     asyncio.run(main())

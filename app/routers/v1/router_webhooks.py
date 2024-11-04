@@ -22,10 +22,8 @@ router = APIRouter(
 async def clerk_webhook_handler(request: Request, response: Response, uow: UOWDep):
     """
     Handle incoming webhook events from Clerk.
-
-    This endpoint processes webhook events sent by Clerk. It verifies the event
-    using a secret, validates the event data, and performs actions based on the
-    event type. Supported event types include 'user.created' and 'user.deleted'.
+    Creates a user if the event type is "user.created" and deletes a user if the event type is "user.deleted".
+    Also initializes the user's directory and removes it if the user is deleted.
 
     Args:
         request (Request): The incoming HTTP request containing headers and body.
@@ -55,7 +53,7 @@ async def clerk_webhook_handler(request: Request, response: Response, uow: UOWDe
                     else None
                 ),
             )
-            # user_id = await UsersService().add_user(uow, user)
+            await UsersService().add_user(uow, user)
             init_ft_userdir(user.clerk_id)
             return
         elif clerk_event.type == "user.deleted":

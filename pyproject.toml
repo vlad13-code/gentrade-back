@@ -37,4 +37,6 @@ dependencies = [
     "flower>=2.0.1",
     "svix>=1.38.0",
     "fastapi-clerk-auth>=0.0.5",
+    "pygraphviz>=1.14",
+    "ipython>=8.29.0",
 ]

@@ -1,8 +1,6 @@
 import os
 import shutil
 from python_on_whales import DockerClient
-from python_on_whales.client_config import ClientConfig
-from contextlib import chdir
 
 from app.config import settings
 

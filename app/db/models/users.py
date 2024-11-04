@@ -17,7 +17,12 @@ class UsersORM(Base):
     createdAt: Mapped[created_at]
     updatedAt: Mapped[updated_at]
 
-    chats = relationship("ChatsORM", back_populates="user")
+    chats = relationship(
+        "ChatsORM",
+        back_populates="user",
+        cascade="all, delete",
+        passive_deletes=True,
+    )
 
     def __repr__(self):
         return f"<UsersORM id={self.id}, name={self.name}, clerk_id={self.clerk_id}, email={self.email}, createdAt={self.createdAt},>"
