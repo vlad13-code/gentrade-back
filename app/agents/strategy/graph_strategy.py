@@ -1,23 +1,23 @@
-from typing import List
+from typing import Annotated
 from typing_extensions import TypedDict
-from pydantic import BaseModel, Field
-from langgraph.graph import START, END, StateGraph
+from langgraph.graph import START, END, StateGraph, MessagesState
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.runnables import RunnableConfig
+from langchain_core.messages import AIMessage, SystemMessage
 
+from app.agents.strategy.tools.strategy_output import strategy_output_tool
 from app.agents.strategy.prompts.base import strategy_instructions
 from app.agents.model import model
 
 
-class Strategy(BaseModel):
-    name: str = Field(description="The name of the strategy")
-    file: str = Field(description="Strategy python file filename")
-    code: str = Field(description="Python code for the strategy")
-    description: str = Field(description="Description of the strategy")
+class Strategy(TypedDict):
+    name: Annotated[str, "The name of the strategy"]
+    file: Annotated[str, "Strategy python file filename"]
+    code: Annotated[str, "Python code for the strategy"]
+    description: Annotated[str, "Description of the strategy"]
 
 
-class CreateStrategyState(TypedDict):
+class CreateStrategyState(MessagesState):
     input: str
     feedback: str
     strategy: Strategy
@@ -34,10 +34,26 @@ async def create_strategy(state: CreateStrategyState):
     system_message = strategy_instructions.format(human_feedback=feedback)
 
     strategy = await structured_model.ainvoke(
-        [SystemMessage(content=system_message)] + [HumanMessage(content=human_prompt)]
+        [SystemMessage(content=system_message)] + human_prompt
     )
 
-    return {"strategy": strategy}
+    # Force call for outputting strategy to frontend. This will initiate on_tool_start event that frontend understands
+    tool_call_ai_message = AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": "StrategyOutputTool",
+                "args": {},
+                "id": "strategy_output_tool_call",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    return {
+        "strategy": strategy,
+        "messages": [tool_call_ai_message],
+    }
 
 
 def human_feedback(state: CreateStrategyState):
@@ -55,18 +71,25 @@ def should_continue(state: CreateStrategyState):
     return END
 
 
-builder = StateGraph(CreateStrategyState)
-builder.add_node("create_strategy", create_strategy)
-builder.add_node("human_feedback", human_feedback)
-builder.add_edge(START, "create_strategy")
-builder.add_edge("create_strategy", "human_feedback")
-builder.add_conditional_edges(
-    "human_feedback", should_continue, ["create_strategy", END]
+strategy_builder = StateGraph(CreateStrategyState)
+strategy_builder.add_node("create_strategy", create_strategy)
+strategy_builder.add_node("tools", ToolNode([strategy_output_tool]))
+strategy_builder.add_node("human_feedback", human_feedback)
+strategy_builder.add_edge(START, "create_strategy")
+strategy_builder.add_conditional_edges(
+    "create_strategy",
+    tools_condition,
+    {"tools": "tools", END: END},
+)
+strategy_builder.add_edge("tools", "human_feedback")
+strategy_builder.add_conditional_edges(
+    "human_feedback", should_continue, {"create_strategy": "create_strategy", END: END}
 )
 
 memory = MemorySaver()
-graph_strategy = builder.compile(
-    interrupt_before=["human_feedback"], checkpointer=memory
+graph_strategy = strategy_builder.compile(
+    # interrupt_before=["human_feedback"],
+    checkpointer=memory
 )
 
 if __name__ == "__main__":
@@ -78,14 +101,14 @@ if __name__ == "__main__":
     load_dotenv()
 
     async def main() -> None:
-        inputs = {"input": "Create a basic trading strategy"}
-        result = await graph_strategy.ainvoke(
-            inputs,
-            config=RunnableConfig(configurable={"thread_id": uuid4()}),
-        )
-        pprint(result["strategy"].code)
-        # graph_strategy.get_graph(xray=1).draw_mermaid_png(
-        #     output_file_path="graph_strategy.png"
+        # inputs = {"input": "Create a basic trading strategy"}
+        # result = await graph_strategy.ainvoke(
+        #     inputs,
+        #     config=RunnableConfig(configurable={"thread_id": uuid4()}),
         # )
+        # pprint(result["strategy"].code)
+        graph_strategy.get_graph(xray=1).draw_mermaid_png(
+            output_file_path="graph_strategy.png"
+        )
 
     asyncio.run(main())

@@ -1,53 +1,47 @@
 from typing import Literal
-
-from langchain_core.language_models.chat_models import BaseChatModel
+from pydantic import BaseModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import (
     RunnableConfig,
     RunnableLambda,
     RunnableSerializable,
 )
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.managed import IsLastStep
-from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.checkpoint.memory import MemorySaver
 
-from app.agents.main.prompts.base import instructions
-from app.agents.main.tools.calculator import calculator
-from app.config import settings
+from app.agents.strategy.graph_strategy import strategy_builder
+from app.agents.main.prompts.base import router_instructions
+from app.agents.model import model
+
+
+AgentType = Literal["strategy", "model"]
+
+
+class RouterResponse(BaseModel):
+    agent: AgentType
 
 
 class AgentState(MessagesState, total=False):
     input: list[HumanMessage | AIMessage | SystemMessage]
     is_last_step: IsLastStep
+    agent: AgentType
 
 
-# NOTE: models with streaming=True will send tokens as they are generated
-# if the /stream endpoint is called with stream_tokens=True (the default)
-models: dict[str, BaseChatModel] = {}
-if settings.OPENAI_API_KEY is not None:
-    models["gpt-4o-mini"] = ChatOpenAI(
-        model="gpt-4o-mini", temperature=0.0, streaming=True
+async def main_router(state: AgentState) -> RouterResponse:
+    structured_model = model.with_structured_output(RouterResponse)
+    system_message = router_instructions.format(agents=AgentType.__args__)
+    router_response = await structured_model.ainvoke(
+        [SystemMessage(content=system_message)] + state["input"]
     )
 
-if not models:
-    print("No LLM available. Please set API keys to enable at least one LLM.")
-    if settings.MODE == "dev":
-        print("FastAPI initialized failed. Please use Ctrl + C to exit uvicorn.")
-    exit(1)
+    return {"agent": router_response.agent}
 
 
-tools = [calculator]
-
-
-def wrap_model(model: BaseChatModel) -> RunnableSerializable[AgentState, AIMessage]:
-    model = model.bind_tools(tools)
+def get_model() -> RunnableSerializable[AgentState, AIMessage]:
     preprocessor = RunnableLambda(
-        lambda state: [SystemMessage(content=instructions)]
-        + state["messages"]
-        + state["input"],
+        lambda state: state["messages"] + state["input"],
         name="StateModifier",
     )
     return preprocessor | model
@@ -56,8 +50,7 @@ def wrap_model(model: BaseChatModel) -> RunnableSerializable[AgentState, AIMessa
 async def acall_model(
     state: AgentState, config: RunnableConfig, *, store: BaseStore
 ) -> AgentState:
-    m = models[config["configurable"].get("model", "gpt-4o-mini")]
-    model_runnable = wrap_model(m)
+    model_runnable = get_model()
     response = await model_runnable.ainvoke(state, config)
 
     if state["is_last_step"] and response.tool_calls:
@@ -72,33 +65,16 @@ async def acall_model(
     return {"messages": [response]}
 
 
-# Define the graph
 agent = StateGraph(AgentState)
+agent.add_node("router", main_router)
 agent.add_node("model", acall_model)
-agent.add_node("tools", ToolNode(tools))
+agent.add_node("strategy", strategy_builder.compile())
+agent.set_entry_point("router")
 agent.add_conditional_edges(
-    "model",
-    tools_condition,
-)
-agent.set_entry_point("model")
-# agent.add_edge("tools", "model")
-
-
-# After "model", if there are tool calls, run "tools". Otherwise END.
-def pending_tool_calls(state: AgentState) -> Literal["tools", "done"]:
-    last_message = state["messages"][-1]
-    if not isinstance(last_message, AIMessage):
-        raise TypeError(f"Expected AIMessage, got {type(last_message)}")
-    if last_message.tool_calls:
-        return "tools"
-    return "done"
-
-
-agent.add_conditional_edges(
-    "model", pending_tool_calls, {"tools": "tools", "done": END}
+    "router", lambda route: route["agent"], {"model": "model", "strategy": "strategy"}
 )
 agent.add_edge("model", END)
-
+agent.add_edge("strategy", END)
 
 graph_main = agent.compile(checkpointer=MemorySaver())
 
@@ -114,7 +90,22 @@ if __name__ == "__main__":
     async def main() -> None:
         from IPython.display import Image, display
 
-        # inputs = {"messages": [("user", "Find me a recipe for chocolate chip cookies")]}
+        # inputs = {
+        #     "messages": [],
+        #     "input": [
+        #         HumanMessage(content="Create a basic trading strategy"),
+        #     ],
+        # }
+
+        # async for event in graph_main.astream_events(
+        #     inputs,
+        #     RunnableConfig(configurable={"thread_id": uuid4()}),
+        #     version="v2",
+        #     # stream_mode="values",
+        # ):
+        #     print(event)
+        #     print("\n")
+
         # result = await graph_main.ainvoke(
         #     inputs,
         #     config=RunnableConfig(configurable={"thread_id": uuid4()}),
