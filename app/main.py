@@ -26,7 +26,7 @@ load_dotenv()
 
 
 class ChatInputType(BaseModel):
-    input: list[HumanMessage | AIMessage | SystemMessage]
+    messages: list[HumanMessage]
 
 
 @asynccontextmanager

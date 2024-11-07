@@ -5,6 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Main Graph",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app.agents.main.graph_main",
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Python Debugger: FastAPI",
       "type": "debugpy",
       "request": "launch",

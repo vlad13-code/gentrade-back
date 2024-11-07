@@ -4,6 +4,13 @@ from typing import Type
 # pylint: disable=import-error
 
 from app.db.db import async_session_maker
+from app.db.repositories.langgraph.repo_langgraph_checkpoint_write import (
+    CheckpointWriteRepository,
+)
+from app.db.repositories.langgraph.repo_langgraph_checkpoint_blob import (
+    CheckpointBlobRepository,
+)
+from app.db.repositories.langgraph.repo_langgraph_checkpoint import CheckpointRepository
 from app.db.repositories.repo_chats import ChatsRepository
 from app.db.repositories.repo_users import UsersRepository
 
@@ -12,6 +19,9 @@ from app.db.repositories.repo_users import UsersRepository
 class IUnitOfWork(ABC):
     chats: Type[ChatsRepository]
     users: Type[UsersRepository]
+    checkpoint_write: Type[CheckpointWriteRepository]
+    checkpoint_blob: Type[CheckpointBlobRepository]
+    checkpoint: Type[CheckpointRepository]
 
     @abstractmethod
     def __init__(self): ...
@@ -38,6 +48,9 @@ class UnitOfWork:
 
         self.users = UsersRepository(self.session)
         self.chats = ChatsRepository(self.session)
+        self.checkpoint_write = CheckpointWriteRepository(self.session)
+        self.checkpoint_blob = CheckpointBlobRepository(self.session)
+        self.checkpoint = CheckpointRepository(self.session)
 
     async def __aexit__(self, *args):
         await self.rollback()

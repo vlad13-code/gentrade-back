@@ -1,39 +1,25 @@
-from typing import Literal
-from pydantic import BaseModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.runnables import (
     RunnableConfig,
     RunnableLambda,
     RunnableSerializable,
 )
-from langgraph.graph import END, MessagesState, StateGraph
-from langgraph.managed import IsLastStep
+from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.checkpoint.memory import MemorySaver
 
+from app.agents.main.schemas import RouterResponse, AgentState, get_agent_descriptions
 from app.agents.strategy.graph_strategy import strategy_builder
 from app.agents.main.prompts.base import router_instructions
 from app.agents.model import model
 
 
-AgentType = Literal["strategy", "model"]
-
-
-class RouterResponse(BaseModel):
-    agent: AgentType
-
-
-class AgentState(MessagesState, total=False):
-    input: list[HumanMessage | AIMessage | SystemMessage]
-    is_last_step: IsLastStep
-    agent: AgentType
-
-
 async def main_router(state: AgentState) -> RouterResponse:
     structured_model = model.with_structured_output(RouterResponse)
-    system_message = router_instructions.format(agents=AgentType.__args__)
+
+    system_message = router_instructions.format(agents=get_agent_descriptions())
     router_response = await structured_model.ainvoke(
-        [SystemMessage(content=system_message)] + state["input"]
+        [SystemMessage(content=system_message)]
     )
 
     return {"agent": router_response.agent}
@@ -41,7 +27,7 @@ async def main_router(state: AgentState) -> RouterResponse:
 
 def get_model() -> RunnableSerializable[AgentState, AIMessage]:
     preprocessor = RunnableLambda(
-        lambda state: state["messages"] + state["input"],
+        lambda state: state["messages"],
         name="StateModifier",
     )
     return preprocessor | model
@@ -81,21 +67,22 @@ graph_main = agent.compile(checkpointer=MemorySaver())
 
 if __name__ == "__main__":
     import asyncio
-    from uuid import uuid4
 
     from dotenv import load_dotenv
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
     load_dotenv()
 
     async def main() -> None:
-        from IPython.display import Image, display
 
-        # inputs = {
-        #     "messages": [],
-        #     "input": [
-        #         HumanMessage(content="Create a basic trading strategy"),
-        #     ],
-        # }
+        inputs = {
+            "messages": [HumanMessage(content="Hey")],
+            "input": [
+                HumanMessage(content="Hey"),
+            ],
+        }
+
+        from uuid import uuid4
 
         # async for event in graph_main.astream_events(
         #     inputs,
@@ -106,11 +93,15 @@ if __name__ == "__main__":
         #     print(event)
         #     print("\n")
 
-        # result = await graph_main.ainvoke(
-        #     inputs,
-        #     config=RunnableConfig(configurable={"thread_id": uuid4()}),
-        # )
-        # result["messages"][-1].pretty_print()
+        config = RunnableConfig(configurable={"thread_id": uuid4()})
+        result = await graph_main.ainvoke(
+            inputs,
+            config=config,
+        )
+
+        state = await graph_main.aget_state(config)
+
+        result["messages"][-1].pretty_print()
 
         # Draw the agent graph as png
         # requires:
@@ -118,7 +109,15 @@ if __name__ == "__main__":
         # export CFLAGS="-I $(brew --prefix graphviz)/include"
         # export LDFLAGS="-L $(brew --prefix graphviz)/lib"
         # pip install pygraphviz
-        #
-        graph_main.get_graph(xray=1).draw_mermaid_png(output_file_path="graph_main.png")
+
+        # graph_main.get_graph(xray=1).draw_mermaid_png(output_file_path="graph_main.png")
+
+        # from pprint import pprint
+
+        # pprint(
+        #     graph_main.get_state(
+        #         {"configurable": {"thread_id": "989772d1-eeca-4d1c-8abe-9351953075eb"}}
+        #     ).values
+        # )
 
     asyncio.run(main())

@@ -1,26 +1,12 @@
-from typing import Annotated
-from typing_extensions import TypedDict
-from langgraph.graph import START, END, StateGraph, MessagesState
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.graph import START, END, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import AIMessage, SystemMessage
 
 from app.agents.strategy.tools.strategy_output import strategy_output_tool
+from app.agents.strategy.schemas import CreateStrategyState, Strategy
 from app.agents.strategy.prompts.base import strategy_instructions
 from app.agents.model import model
-
-
-class Strategy(TypedDict):
-    name: Annotated[str, "The name of the strategy"]
-    file: Annotated[str, "Strategy python file filename"]
-    code: Annotated[str, "Python code for the strategy"]
-    description: Annotated[str, "Description of the strategy"]
-
-
-class CreateStrategyState(MessagesState):
-    input: str
-    feedback: str
-    strategy: Strategy
 
 
 async def create_strategy(state: CreateStrategyState):
@@ -32,12 +18,12 @@ async def create_strategy(state: CreateStrategyState):
     structured_model = model.with_structured_output(Strategy)
 
     system_message = strategy_instructions.format(human_feedback=feedback)
-
     strategy = await structured_model.ainvoke(
         [SystemMessage(content=system_message)] + human_prompt
     )
 
-    # Force call for outputting strategy to frontend. This will initiate on_tool_start event that frontend understands
+    # Force call for outputting strategy to frontend.
+    # This will initiate on_tool_start event that frontend understands
     tool_call_ai_message = AIMessage(
         content="",
         tool_calls=[
@@ -95,12 +81,12 @@ graph_strategy = strategy_builder.compile(
 if __name__ == "__main__":
     import asyncio
     from dotenv import load_dotenv
-    from uuid import uuid4
-    from pprint import pprint
 
     load_dotenv()
 
     async def main() -> None:
+        # from uuid import uuid4
+        # from pprint import pprint
         # inputs = {"input": "Create a basic trading strategy"}
         # result = await graph_strategy.ainvoke(
         #     inputs,

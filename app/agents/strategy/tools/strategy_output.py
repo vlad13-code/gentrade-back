@@ -14,10 +14,7 @@ def strategy_output_tool_func(state: Annotated[dict, InjectedState]) -> str:
         dict: The strategy name and description.
     """
 
-    return {
-        "name": state["strategy"]["name"],
-        "description": state["strategy"]["description"],
-    }
+    return state["strategy"].model_dump()
 
 
 strategy_output_tool: BaseTool = tool(strategy_output_tool_func)

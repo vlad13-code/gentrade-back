@@ -148,6 +148,10 @@ class ChatsService:
                     return False
 
                 await uow.chats.delete_one(chat.id)
+                # Delete all LangGraph related entries
+                await uow.checkpoint.delete_one_by(thread_id=thread_id)
+                await uow.checkpoint_write.delete_one_by(thread_id=thread_id)
+                await uow.checkpoint_blob.delete_one_by(thread_id=thread_id)
                 await uow.commit()
                 return True
             except Exception as e:
