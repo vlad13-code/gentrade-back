@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage
 from langserve import add_routes
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver

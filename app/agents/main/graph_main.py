@@ -69,20 +69,21 @@ if __name__ == "__main__":
     import asyncio
 
     from dotenv import load_dotenv
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+    # from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
     load_dotenv()
 
     async def main() -> None:
 
-        inputs = {
-            "messages": [HumanMessage(content="Hey")],
-            "input": [
-                HumanMessage(content="Hey"),
-            ],
-        }
+        # inputs = {
+        #     "messages": [HumanMessage(content="Hey")],
+        #     "input": [
+        #         HumanMessage(content="Hey"),
+        #     ],
+        # }
 
-        from uuid import uuid4
+        # from uuid import uuid4
 
         # async for event in graph_main.astream_events(
         #     inputs,
@@ -93,15 +94,15 @@ if __name__ == "__main__":
         #     print(event)
         #     print("\n")
 
-        config = RunnableConfig(configurable={"thread_id": uuid4()})
-        result = await graph_main.ainvoke(
-            inputs,
-            config=config,
-        )
+        # config = RunnableConfig(configurable={"thread_id": uuid4()})
+        # result = await graph_main.ainvoke(
+        #     inputs,
+        #     config=config,
+        # )
 
-        state = await graph_main.aget_state(config)
+        # state = await graph_main.aget_state(config)
 
-        result["messages"][-1].pretty_print()
+        # result["messages"][-1].pretty_print()
 
         # Draw the agent graph as png
         # requires:
@@ -110,7 +111,7 @@ if __name__ == "__main__":
         # export LDFLAGS="-L $(brew --prefix graphviz)/lib"
         # pip install pygraphviz
 
-        # graph_main.get_graph(xray=1).draw_mermaid_png(output_file_path="graph_main.png")
+        graph_main.get_graph(xray=1).draw_mermaid_png(output_file_path="graph_main.png")
 
         # from pprint import pprint
 

@@ -1,6 +1,5 @@
 # pylint: disable=import-error
 from fastapi import APIRouter, Request, Response, status
-from httpx import request
 
 from app.dependencies import UOWDep, UserAuthDep
 from app.schemas.schema_chats import (
@@ -130,8 +129,8 @@ async def get_chat(
         ChatSchema: The chat data.
         ResponseChatNotFound: If the chat could not be found.
     """
-    graph = request.app.state.agent
-    graph_state = await graph.aget_state({"configurable": {"thread_id": thread_id}})
+    # graph = request.app.state.agent
+    # graph_state = await graph.aget_state({"configurable": {"thread_id": thread_id}})
     chat = await ChatsService().get_chat(uow, thread_id)
     if not chat:
         response.status_code = status.HTTP_404_NOT_FOUND

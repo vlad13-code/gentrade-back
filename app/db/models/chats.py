@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 
 # Import the module where StrategiesORM is defined
-from app.db.models.strategies import StrategiesORM
+from app.db.models.strategies import StrategiesORM  # noqa: F401
 
 
 class ChatsORM(Base):
