@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 
 from app.db.models.users import UsersORM
 from app.db.services.service_users import UsersService
-from app.db.utils.unitofwork import IUnitOfWork
+from app.db.utils.unitofwork import UnitOfWork
 from app.schemas.schema_users import UserSchemaAuth
 
 P = ParamSpec("P")
@@ -21,33 +21,47 @@ def require_user(func: Callable[P, R]) -> Callable[P, R]:
     @wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         # Find uow and user in arguments
-        uow = next((arg for arg in args if isinstance(arg, IUnitOfWork)), None)
+        uow = next((arg for arg in args if isinstance(arg, UnitOfWork)), None)
         if not uow:
             uow = kwargs.get("uow")
+            if not uow:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="UnitOfWork not found in arguments",
+                )
 
+        # Find user in both args and kwargs
         user_auth = next((arg for arg in args if isinstance(arg, UserSchemaAuth)), None)
+        if not user_auth and "user" in kwargs:
+            user_auth = kwargs["user"]
+            if not isinstance(user_auth, UserSchemaAuth):
+                return await func(*args, **kwargs)
+
         if not user_auth:
-            user_auth = kwargs.get("user")
-
-        if not uow or not user_auth:
-            return await func(*args, **kwargs)
-
-        # Get authenticated user
-        user: UsersORM = await UsersService()._get_user_by_clerk_id(
-            uow, user_auth.clerk_id
-        )
-        if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or unauthorized",
+                detail="User authentication required",
             )
 
-        # Replace UserSchemaAuth with UsersORM in args/kwargs
-        new_args = [user if isinstance(arg, UserSchemaAuth) else arg for arg in args]
-        new_kwargs = {
-            k: user if isinstance(v, UserSchemaAuth) else v for k, v in kwargs.items()
-        }
+        async with uow:
+            # Get authenticated user
+            user: UsersORM = await UsersService()._get_user_by_clerk_id(
+                uow, user_auth.clerk_id
+            )
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found or unauthorized",
+                )
 
-        return await func(*new_args, **new_kwargs)
+            # Create new args and kwargs with the authenticated user
+            new_args = tuple(
+                user if isinstance(arg, UserSchemaAuth) else arg for arg in args
+            )
+            new_kwargs = dict(kwargs)
+            if "user" in new_kwargs and isinstance(new_kwargs["user"], UserSchemaAuth):
+                new_kwargs["user"] = user
+
+            return await func(*new_args, **new_kwargs)
 
     return wrapper

@@ -44,9 +44,11 @@ class IUnitOfWork(ABC):
 class UnitOfWork:
     def __init__(self):
         self.session_factory = async_session_maker
+        self.session = None
 
     async def __aenter__(self):
-        self.session = self.session_factory()
+        if not self.session:
+            self.session = self.session_factory()
 
         self.users = UsersRepository(self.session)
         self.strategies = StrategiesRepository(self.session)
