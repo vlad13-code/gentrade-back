@@ -12,6 +12,7 @@ from app.db.repositories.langgraph.repo_langgraph_checkpoint_blob import (
 )
 from app.db.repositories.langgraph.repo_langgraph_checkpoint import CheckpointRepository
 from app.db.repositories.repo_chats import ChatsRepository
+from app.db.repositories.repo_strategies import StrategiesRepository
 from app.db.repositories.repo_users import UsersRepository
 
 
@@ -19,6 +20,7 @@ from app.db.repositories.repo_users import UsersRepository
 class IUnitOfWork(ABC):
     chats: Type[ChatsRepository]
     users: Type[UsersRepository]
+    strategies: Type[StrategiesRepository]
     checkpoint_write: Type[CheckpointWriteRepository]
     checkpoint_blob: Type[CheckpointBlobRepository]
     checkpoint: Type[CheckpointRepository]
@@ -47,6 +49,7 @@ class UnitOfWork:
         self.session = self.session_factory()
 
         self.users = UsersRepository(self.session)
+        self.strategies = StrategiesRepository(self.session)
         self.chats = ChatsRepository(self.session)
         self.checkpoint_write = CheckpointWriteRepository(self.session)
         self.checkpoint_blob = CheckpointBlobRepository(self.session)

@@ -1,9 +1,5 @@
 from langchain_core.messages import AIMessage, SystemMessage
-from langchain_core.runnables import (
-    RunnableConfig,
-    RunnableLambda,
-    RunnableSerializable,
-)
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.checkpoint.memory import MemorySaver
@@ -19,25 +15,16 @@ async def main_router(state: AgentState) -> RouterResponse:
 
     system_message = router_instructions.format(agents=get_agent_descriptions())
     router_response = await structured_model.ainvoke(
-        [SystemMessage(content=system_message)]
+        [SystemMessage(content=system_message)] + state["messages"]
     )
 
     return {"agent": router_response.agent}
 
 
-def get_model() -> RunnableSerializable[AgentState, AIMessage]:
-    preprocessor = RunnableLambda(
-        lambda state: state["messages"],
-        name="StateModifier",
-    )
-    return preprocessor | model
-
-
 async def acall_model(
     state: AgentState, config: RunnableConfig, *, store: BaseStore
 ) -> AgentState:
-    model_runnable = get_model()
-    response = await model_runnable.ainvoke(state, config)
+    response = await model.ainvoke(state["messages"], config)
 
     if state["is_last_step"] and response.tool_calls:
         return {

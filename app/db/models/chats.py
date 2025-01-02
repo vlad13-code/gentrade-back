@@ -22,12 +22,5 @@ class ChatsORM(Base):
 
     user = relationship("UsersORM", back_populates="chats")
 
-    strategy = relationship(
-        "StrategiesORM",
-        back_populates="chat",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
-
     def __repr__(self):
         return f"<ChatsORM id={self.id}, thread_id={self.thread_id}, user_id={self.user_id} createdAt={self.createdAt},>"

@@ -13,13 +13,11 @@ async def create_strategy(state: CreateStrategyState):
     """Create a strategy"""
 
     feedback = state.get("feedback", "")
-    human_prompt = state["input"]
-
     structured_model = model.with_structured_output(Strategy)
 
     system_message = strategy_instructions.format(human_feedback=feedback)
     strategy = await structured_model.ainvoke(
-        [SystemMessage(content=system_message)] + human_prompt
+        [SystemMessage(content=system_message)] + state["messages"]
     )
 
     # Force call for outputting strategy to frontend.

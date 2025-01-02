@@ -24,5 +24,12 @@ class UsersORM(Base):
         passive_deletes=True,
     )
 
+    strategies = relationship(
+        "StrategiesORM",
+        back_populates="user",
+        cascade="all, delete",
+        passive_deletes=True,
+    )
+
     def __repr__(self):
         return f"<UsersORM id={self.id}, name={self.name}, clerk_id={self.clerk_id}, email={self.email}, createdAt={self.createdAt},>"
