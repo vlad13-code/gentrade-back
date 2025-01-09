@@ -5,7 +5,7 @@ from langgraph.store.base import BaseStore
 from langgraph.checkpoint.memory import MemorySaver
 
 from app.agents.main.schemas import RouterResponse, AgentState, get_agent_descriptions
-from app.agents.strategy.graph_strategy import strategy_builder
+from app.agents.strategy.graph_strategy_draft import strategy_builder
 from app.agents.main.prompts.base import router_instructions
 from app.agents.model import model
 
@@ -41,13 +41,15 @@ async def acall_model(
 agent = StateGraph(AgentState)
 agent.add_node("router", main_router)
 agent.add_node("model", acall_model)
-agent.add_node("strategy", strategy_builder.compile())
+agent.add_node("strategy_draft", strategy_builder.compile())
 agent.set_entry_point("router")
 agent.add_conditional_edges(
-    "router", lambda route: route["agent"], {"model": "model", "strategy": "strategy"}
+    "router",
+    lambda route: route["agent"],
+    {"model": "model", "strategy_draft": "strategy_draft"},
 )
 agent.add_edge("model", END)
-agent.add_edge("strategy", END)
+agent.add_edge("strategy_draft", END)
 
 graph_main = agent.compile(checkpointer=MemorySaver())
 

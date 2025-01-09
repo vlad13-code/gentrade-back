@@ -3,7 +3,7 @@ from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt import InjectedState
 
 
-def strategy_output_tool_func(state: Annotated[dict, InjectedState]) -> str:
+def strategy_draft_output_tool_func(state: Annotated[dict, InjectedState]) -> str:
     """
     Generates a basic trading strategy.
 
@@ -14,8 +14,8 @@ def strategy_output_tool_func(state: Annotated[dict, InjectedState]) -> str:
         dict: The strategy name and description.
     """
 
-    return state["strategy"].model_dump()
+    return state["strategy_draft"].model_dump()
 
 
-strategy_output_tool: BaseTool = tool(strategy_output_tool_func)
-strategy_output_tool.name = "StrategyOutputTool"
+strategy_draft_output_tool: BaseTool = tool(strategy_draft_output_tool_func)
+strategy_draft_output_tool.name = "StrategyDraftOutputTool"

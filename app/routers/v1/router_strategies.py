@@ -3,7 +3,10 @@ from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
 from app.dependencies import UOWDep, UserAuthDep
-from app.schemas.schema_strategies import StrategySchemaAdd, StrategySchema
+from app.schemas.schema_strategies import (
+    StrategyDraftSchemaAdd,
+    StrategySchema,
+)
 from app.db.services.service_strategies import StrategiesService
 
 router = APIRouter(
@@ -20,12 +23,12 @@ class StrategyAdded(BaseModel):
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=StrategyAdded,
-    summary="Add a new strategy",
+    summary="Add and deploy a new strategy",
 )
 async def add_strategy(
-    strategy: StrategySchemaAdd, uow: UOWDep, user: UserAuthDep
+    strategy_draft: StrategyDraftSchemaAdd, uow: UOWDep, user: UserAuthDep
 ) -> StrategyAdded:
-    strategy_id = await StrategiesService().add_strategy(uow, strategy, user)
+    strategy_id = await StrategiesService().add_strategy(uow, strategy_draft, user)
     return StrategyAdded(id=strategy_id)
 
 

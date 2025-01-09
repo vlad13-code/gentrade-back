@@ -1,12 +1,10 @@
 # pylint: disable=import-error
-from fastapi import APIRouter, Request, Response, status
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
 from app.dependencies import UOWDep, UserAuthDep
 from app.schemas.schema_chats import (
-    ChatListItem,
+    ChatListItemSchema,
     ChatSchemaAddUpdate,
     ChatSchema,
 )
@@ -52,13 +50,13 @@ async def update_chat(
 @router.get(
     "",
     status_code=status.HTTP_200_OK,
-    response_model=list[ChatListItem],
+    response_model=list[ChatListItemSchema],
     summary="Get all chats histories for the current user. No messages, only ids and timestamps",
 )
 async def get_chat_list(
     uow: UOWDep,
     user: UserAuthDep,
-) -> list[ChatListItem]:
+) -> list[ChatListItemSchema]:
     return await ChatsService().get_chat_list(uow, user)
 
 
@@ -87,4 +85,3 @@ async def delete_chat(
     user: UserAuthDep,
 ):
     await ChatsService().delete_chat(uow, thread_id, user)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

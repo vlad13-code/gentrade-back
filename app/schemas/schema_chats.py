@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 class ChatSchemaAddUpdate(BaseModel):
-    title: str
+    title: Optional[str]
     messages: list[dict]
     thread_id: str | UUID
     user_id: Optional[int] = Field(
@@ -20,7 +20,7 @@ class ChatSchema(ChatSchemaAddUpdate):
     updatedAt: datetime
 
 
-class ChatListItem(BaseModel):
+class ChatListItemSchema(BaseModel):
     id: int
     thread_id: str | UUID
     title: str
