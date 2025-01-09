@@ -1,0 +1,204 @@
+.
+├── Dockerfile
+├── LICENSE
+├── README.md
+├── alembic.ini
+├── app
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── config.cpython-312.pyc
+│   │   ├── dependencies.cpython-312.pyc
+│   │   └── main.cpython-312.pyc
+│   ├── agents
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── model.cpython-312.pyc
+│   │   ├── main
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-312.pyc
+│   │   │   │   ├── graph_main.cpython-312.pyc
+│   │   │   │   └── schemas.cpython-312.pyc
+│   │   │   ├── graph_main.py
+│   │   │   ├── prompts
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │   │   │   │   └── base.cpython-312.pyc
+│   │   │   │   └── base.py
+│   │   │   ├── schemas.py
+│   │   │   └── tools
+│   │   │       ├── __init__.py
+│   │   │       ├── __pycache__
+│   │   │       │   ├── __init__.cpython-312.pyc
+│   │   │       │   └── calculator.cpython-312.pyc
+│   │   │       └── calculator.py
+│   │   ├── model.py
+│   │   └── strategy
+│   │       ├── __init__.py
+│   │       ├── __pycache__
+│   │       │   ├── __init__.cpython-312.pyc
+│   │       │   ├── graph_strategy.cpython-312.pyc
+│   │       │   └── schemas.cpython-312.pyc
+│   │       ├── graph_strategy.py
+│   │       ├── prompts
+│   │       │   ├── __init__.py
+│   │       │   ├── __pycache__
+│   │       │   │   ├── __init__.cpython-312.pyc
+│   │       │   │   └── base.cpython-312.pyc
+│   │       │   └── base.py
+│   │       ├── schemas.py
+│   │       └── tools
+│   │           ├── __pycache__
+│   │           │   ├── strategy.cpython-312.pyc
+│   │           │   └── strategy_output.cpython-312.pyc
+│   │           └── strategy_output.py
+│   ├── config.py
+│   ├── db
+│   │   ├── __pycache__
+│   │   │   └── db.cpython-312.pyc
+│   │   ├── db.py
+│   │   ├── migrations
+│   │   │   ├── __pycache__
+│   │   │   │   ├── env.cpython-310.pyc
+│   │   │   │   └── env.cpython-312.pyc
+│   │   │   ├── env.py
+│   │   │   ├── script.py.mako
+│   │   │   └── versions
+│   │   │       ├── 2920153f5347_strategies_code.py
+│   │   │       ├── 3d60a69a0491_chat_title.py
+│   │   │       ├── 48ce389f887d_add_strategies.py
+│   │   │       ├── 65610e92cb70_stragies_users.py
+│   │   │       ├── 7703d921959e_fix_cascade.py
+│   │   │       ├── 7fb972aefde9_unique_chat_thread_id.py
+│   │   │       ├── 8670cc3168bc_initial_migration.py
+│   │   │       └── __pycache__
+│   │   │           ├── 2920153f5347_strategies_code.cpython-312.pyc
+│   │   │           ├── 3d60a69a0491_chat_title.cpython-312.pyc
+│   │   │           ├── 48ce389f887d_add_strategies.cpython-312.pyc
+│   │   │           ├── 65610e92cb70_stragies_users.cpython-312.pyc
+│   │   │           ├── 7703d921959e_fix_cascade.cpython-312.pyc
+│   │   │           ├── 7fb972aefde9_unique_chat_thread_id.cpython-312.pyc
+│   │   │           ├── 8670cc3168bc_initial_migration.cpython-312.pyc
+│   │   │           └── b4a53221c6fa_add_strategies.cpython-312.pyc
+│   │   ├── models
+│   │   │   ├── __pycache__
+│   │   │   │   ├── _common.cpython-312.pyc
+│   │   │   │   ├── chats.cpython-312.pyc
+│   │   │   │   ├── strategies.cpython-312.pyc
+│   │   │   │   └── users.cpython-312.pyc
+│   │   │   ├── _common.py
+│   │   │   ├── chats.py
+│   │   │   ├── langgraph
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── checkpoint.cpython-312.pyc
+│   │   │   │   │   ├── checkpoint_blob.cpython-312.pyc
+│   │   │   │   │   ├── checkpoint_write.cpython-312.pyc
+│   │   │   │   │   ├── migrations.cpython-312.pyc
+│   │   │   │   │   └── store.cpython-312.pyc
+│   │   │   │   ├── checkpoint.py
+│   │   │   │   ├── checkpoint_blob.py
+│   │   │   │   ├── checkpoint_write.py
+│   │   │   │   ├── migrations.py
+│   │   │   │   └── store.py
+│   │   │   ├── strategies.py
+│   │   │   └── users.py
+│   │   ├── repositories
+│   │   │   ├── __pycache__
+│   │   │   │   ├── repo_chats.cpython-312.pyc
+│   │   │   │   ├── repo_strategies.cpython-312.pyc
+│   │   │   │   └── repo_users.cpython-312.pyc
+│   │   │   ├── langgraph
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── repo_langgraph_checkpoint.cpython-312.pyc
+│   │   │   │   │   ├── repo_langgraph_checkpoint_blob.cpython-312.pyc
+│   │   │   │   │   └── repo_langgraph_checkpoint_write.cpython-312.pyc
+│   │   │   │   ├── repo_langgraph_checkpoint.py
+│   │   │   │   ├── repo_langgraph_checkpoint_blob.py
+│   │   │   │   └── repo_langgraph_checkpoint_write.py
+│   │   │   ├── repo_chats.py
+│   │   │   ├── repo_strategies.py
+│   │   │   └── repo_users.py
+│   │   ├── services
+│   │   │   ├── __pycache__
+│   │   │   │   ├── service_chats.cpython-312.pyc
+│   │   │   │   ├── service_strategies.cpython-312.pyc
+│   │   │   │   └── service_users.cpython-312.pyc
+│   │   │   ├── service_chats.py
+│   │   │   ├── service_strategies.py
+│   │   │   └── service_users.py
+│   │   └── utils
+│   │       ├── __pycache__
+│   │       │   ├── decorators.cpython-312.pyc
+│   │       │   ├── repository.cpython-312.pyc
+│   │       │   └── unitofwork.cpython-312.pyc
+│   │       ├── decorators.py
+│   │       ├── repository.py
+│   │       └── unitofwork.py
+│   ├── dependencies.py
+│   ├── main.py
+│   ├── routers
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   ├── chats.cpython-312.pyc
+│   │   │   ├── items.cpython-312.pyc
+│   │   │   ├── routers.cpython-312.pyc
+│   │   │   └── users.cpython-312.pyc
+│   │   └── v1
+│   │       ├── __init__.py
+│   │       ├── __pycache__
+│   │       │   ├── __init__.cpython-312.pyc
+│   │       │   ├── chats.cpython-312.pyc
+│   │       │   ├── router_chats.cpython-312.pyc
+│   │       │   ├── router_strategies.cpython-312.pyc
+│   │       │   ├── router_users.cpython-312.pyc
+│   │       │   ├── router_webhooks.cpython-312.pyc
+│   │       │   └── routers.cpython-312.pyc
+│   │       ├── router_chats.py
+│   │       ├── router_strategies.py
+│   │       ├── router_users.py
+│   │       ├── router_webhooks.py
+│   │       └── routers.py
+│   ├── schemas
+│   │   ├── __pycache__
+│   │   │   ├── schema_chats.cpython-312.pyc
+│   │   │   ├── schema_clerk_webhook_event.cpython-312.pyc
+│   │   │   ├── schema_strategies.cpython-312.pyc
+│   │   │   └── schema_users.cpython-312.pyc
+│   │   ├── schema_chats.py
+│   │   ├── schema_clerk_webhook_event.py
+│   │   ├── schema_strategies.py
+│   │   └── schema_users.py
+│   └── util
+│       ├── __pycache__
+│       │   ├── ft_userdir.cpython-312.pyc
+│       │   └── init_ft_userdir.cpython-312.pyc
+│       └── ft_userdir.py
+├── db_reset.sh
+├── ft_userdata
+│   ├── _common_data
+│   │   └── futures
+│   │       ├── BTC_USDT_USDT-1m-futures.feather
+│   │       ├── BTC_USDT_USDT-5m-futures.feather
+│   │       ├── BTC_USDT_USDT-8h-funding_rate.feather
+│   │       ├── BTC_USDT_USDT-8h-mark.feather
+│   │       ├── ETH_USDT_USDT-1m-futures.feather
+│   │       ├── ETH_USDT_USDT-5m-futures.feather
+│   │       ├── ETH_USDT_USDT-8h-funding_rate.feather
+│   │       ├── ETH_USDT_USDT-8h-mark.feather
+│   │       ├── SOL_USDT_USDT-1m-futures.feather
+│   │       ├── SOL_USDT_USDT-5m-futures.feather
+│   │       ├── SOL_USDT_USDT-8h-funding_rate.feather
+│   │       └── SOL_USDT_USDT-8h-mark.feather
+│   └── docker-compose.template
+├── graph_main.png
+├── graph_strategy.png
+├── langgraph.json
+├── project_filestructure.txt
+├── pyproject.toml
+└── uv.lock
+
+46 directories, 156 files

@@ -5,11 +5,11 @@ from langgraph.graph import MessagesState
 from langgraph.managed import IsLastStep
 
 routed_agents = {
-    "strategy": "Designed for creating trading strategies based on user input",
+    "strategy_draft": "Designed for creating trading strategies based on user input",
     "model": "Designed for using the chat model to answer questions",
 }
 
-AgentType = Literal["strategy", "model"]
+AgentType = Literal["strategy_draft", "model"]
 
 
 class RouterResponse(BaseModel):

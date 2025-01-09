@@ -3,20 +3,20 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import AIMessage, SystemMessage
 
-from app.agents.strategy.tools.strategy_output import strategy_output_tool
-from app.agents.strategy.schemas import CreateStrategyState, Strategy
-from app.agents.strategy.prompts.base import strategy_instructions
+from app.agents.strategy.tools.strategy_draft_output import strategy_draft_output_tool
+from app.agents.strategy.schemas import CreateStrategyDraftState, StrategyDraft
+from app.agents.strategy.prompts.base import strategy_draft_instructions
 from app.agents.model import model
 
 
-async def create_strategy(state: CreateStrategyState):
-    """Create a strategy"""
+async def create_strategy_draft(state: CreateStrategyDraftState):
+    """Create a strategy draft"""
 
     feedback = state.get("feedback", "")
-    structured_model = model.with_structured_output(Strategy)
+    structured_model = model.with_structured_output(StrategyDraft)
 
-    system_message = strategy_instructions.format(human_feedback=feedback)
-    strategy = await structured_model.ainvoke(
+    system_message = strategy_draft_instructions.format(human_feedback=feedback)
+    strategy_draft = await structured_model.ainvoke(
         [SystemMessage(content=system_message)] + state["messages"]
     )
 
@@ -26,48 +26,50 @@ async def create_strategy(state: CreateStrategyState):
         content="",
         tool_calls=[
             {
-                "name": "StrategyOutputTool",
+                "name": "StrategyDraftOutputTool",
                 "args": {},
-                "id": "strategy_output_tool_call",
+                "id": "strategy_draft_output_tool_call",
                 "type": "tool_call",
             }
         ],
     )
 
     return {
-        "strategy": strategy,
+        "strategy_draft": strategy_draft,
         "messages": [tool_call_ai_message],
     }
 
 
-def human_feedback(state: CreateStrategyState):
+def human_feedback(state: CreateStrategyDraftState):
     """No-op node that should be interrupted on"""
     pass
 
 
-def should_continue(state: CreateStrategyState):
+def should_continue(state: CreateStrategyDraftState):
     """Return the next node to execute"""
 
     feedback = state.get("feedback", None)
     if feedback:
-        return "create_strategy"
+        return "create_strategy_draft"
 
     return END
 
 
-strategy_builder = StateGraph(CreateStrategyState)
-strategy_builder.add_node("create_strategy", create_strategy)
-strategy_builder.add_node("tools", ToolNode([strategy_output_tool]))
+strategy_builder = StateGraph(CreateStrategyDraftState)
+strategy_builder.add_node("create_strategy_draft", create_strategy_draft)
+strategy_builder.add_node("tools", ToolNode([strategy_draft_output_tool]))
 strategy_builder.add_node("human_feedback", human_feedback)
-strategy_builder.add_edge(START, "create_strategy")
+strategy_builder.add_edge(START, "create_strategy_draft")
 strategy_builder.add_conditional_edges(
-    "create_strategy",
+    "create_strategy_draft",
     tools_condition,
     {"tools": "tools", END: END},
 )
 strategy_builder.add_edge("tools", "human_feedback")
 strategy_builder.add_conditional_edges(
-    "human_feedback", should_continue, {"create_strategy": "create_strategy", END: END}
+    "human_feedback",
+    should_continue,
+    {"create_strategy_draft": "create_strategy_draft", END: END},
 )
 
 memory = MemorySaver()

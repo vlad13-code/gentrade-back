@@ -1,7 +1,7 @@
 # pylint: disable=import-error
 from fastapi import HTTPException, status
 from app.db.models.chats import ChatsORM
-from app.schemas.schema_chats import ChatSchemaAddUpdate, ChatSchema, ChatListItem
+from app.schemas.schema_chats import ChatSchemaAddUpdate, ChatSchema, ChatListItemSchema
 from app.db.utils.unitofwork import IUnitOfWork
 from app.db.models.users import UsersORM
 from app.db.utils.decorators import require_user
@@ -30,7 +30,7 @@ class ChatsService:
     @require_user
     async def update_chat(
         self, uow: IUnitOfWork, chat: ChatSchemaAddUpdate, user: UsersORM
-    ) -> int:
+    ) -> ChatSchema:
         async with uow:
             chat.user_id = user.id
             chat_dict = chat.model_dump()
@@ -47,11 +47,16 @@ class ChatsService:
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="Not authorized to update this chat",
                     )
-                chat_id = await uow.chats.edit_one(existing_chat.id, chat_dict)
+
+                if not chat.title:
+                    chat_dict["title"] = existing_chat.title
+
+                await uow.chats.edit_one(existing_chat.id, chat_dict)
                 await uow.commit()
-                return chat_id
-            except HTTPException:
-                raise
+
+                # Fetch the updated chat to return
+                updated_chat = await uow.chats.find_one(id=existing_chat.id)
+                return ChatSchema.model_validate(updated_chat, from_attributes=True)
             except Exception as e:
                 logging.error(f"Error updating chat: {e}")
                 raise HTTPException(
@@ -62,14 +67,14 @@ class ChatsService:
     @require_user
     async def get_chat_list(
         self, uow: IUnitOfWork, user: UsersORM
-    ) -> list[ChatListItem]:
+    ) -> list[ChatListItemSchema]:
         async with uow:
             try:
                 chats = await uow.chats.find_all_by_ordered(
                     order_by="updatedAt", order_direction="desc", user_id=user.id
                 )
                 return [
-                    ChatListItem.model_validate(chat, from_attributes=True)
+                    ChatListItemSchema.model_validate(chat, from_attributes=True)
                     for chat in chats
                 ]
             except Exception as e:
@@ -96,8 +101,6 @@ class ChatsService:
                         detail="Not authorized to access this chat",
                     )
                 return ChatSchema.model_validate(chat, from_attributes=True)
-            except HTTPException:
-                raise
             except Exception as e:
                 logging.error(f"Error retrieving chat with thread_id {thread_id}: {e}")
                 raise HTTPException(
@@ -128,8 +131,6 @@ class ChatsService:
                 await uow.checkpoint_write.delete_one_by(thread_id=thread_id)
                 await uow.checkpoint_blob.delete_one_by(thread_id=thread_id)
                 await uow.commit()
-            except HTTPException:
-                raise
             except Exception as e:
                 logging.error(f"Error deleting chat with thread_id {thread_id}: {e}")
                 raise HTTPException(

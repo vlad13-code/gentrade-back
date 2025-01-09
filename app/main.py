@@ -96,7 +96,6 @@ add_routes(
     dependencies=[Depends(check_auth)],
 )
 
-# Example of adding a path prefix to a group of routers
 for router in all_routers:
     app.include_router(router, prefix="/api/v1")
 

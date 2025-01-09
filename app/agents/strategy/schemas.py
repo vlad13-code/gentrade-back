@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from langgraph.graph import MessagesState
 
 
-class Strategy(BaseModel):
+class StrategyDraft(BaseModel):
     name: str = Field(description="Unique strategy name.")
     file: str = Field(description="Python file containing the strategy.")
     description: str = Field(
@@ -23,7 +23,18 @@ class Strategy(BaseModel):
     can_short: bool = Field(description="Indicates if shorting is supported.")
 
 
-class CreateStrategyState(MessagesState):
+class CreateStrategyDraftState(MessagesState):
     input: str
     feedback: str
-    strategy: Strategy
+    strategy_draft: StrategyDraft
+
+
+class StrategyCode(BaseModel):
+    code: str = Field(description="The complete Python code for the FreqTrade strategy")
+
+
+class GenerateStrategyCodeState(MessagesState):
+    """State for strategy generation graph"""
+
+    strategy_draft: StrategyDraft
+    strategy_code: StrategyCode
