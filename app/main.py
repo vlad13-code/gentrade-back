@@ -21,6 +21,7 @@ from app.agents.main.graph_main import graph_main
 from app.config import settings
 from app.dependencies import check_auth
 from app.routers.v1.routers import all_routers
+from app.db.models import *  # noqa: F403
 
 load_dotenv()
 

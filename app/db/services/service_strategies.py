@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from app.db.models.chats import ChatsORM
 from app.db.utils.unitofwork import IUnitOfWork
 from app.db.models.strategies import StrategiesORM
 from app.db.models.users import UsersORM
@@ -11,6 +12,7 @@ from app.schemas.schema_strategies import (
 )
 from app.util.ft_userdir import init_ft_userdir
 from app.util.ft_strategies import write_strategy_file
+from app.db.utils.chat_message_utils import ChatMessageUtils
 
 
 class StrategiesService:
@@ -23,6 +25,20 @@ class StrategiesService:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND, detail="Strategy not found"
                 )
+
+            # Remove strategyId from messages in chats so frontend properly displays the strategy draft tool
+            try:
+                chat: ChatsORM = await uow.chats.find_one(id=strategy.chat_id)
+                if chat and chat.messages:
+                    chat.messages = [
+                        ChatMessageUtils.remove_strategy_id_from_message(message, id)
+                        for message in chat.messages
+                    ]
+                await uow.chats.edit_one(chat.id, {"messages": chat.messages})
+            except Exception:
+                # Chat already deleted
+                return False
+
             await uow.strategies.delete_one(id)
             await uow.commit()
             return True
@@ -53,7 +69,7 @@ class StrategiesService:
     @require_user
     async def add_strategy(
         self, uow: IUnitOfWork, strategy_draft: StrategyDraftSchemaAdd, user: UsersORM
-    ) -> int:
+    ) -> StrategySchema:
         async with uow:
             # Generate strategy code using LLM
             result = await graph_strategy_code.ainvoke(
@@ -86,8 +102,22 @@ class StrategiesService:
                 code=strategy_code,
                 file=strategy_file,
                 user_id=user.id,
+                draft=strategy_draft.model_dump(),
+                chat_id=strategy_draft.chat_id,
+            )
+            strategy: StrategiesORM = await uow.strategies.add_one(
+                new_strategy.model_dump()
             )
 
-            strategy_id = await uow.strategies.add_one(new_strategy.model_dump())
+            chat: ChatsORM = await uow.chats.find_one(id=strategy.chat_id)
+            if chat and chat.messages:
+                chat.messages = [
+                    ChatMessageUtils.add_strategy_id_to_message(
+                        message, strategy_draft.tool_call_id, strategy.id
+                    )
+                    for message in chat.messages
+                ]
+            await uow.chats.edit_one(chat.id, {"messages": chat.messages})
+
             await uow.commit()
-            return strategy_id
+            return StrategySchema.model_validate(strategy, from_attributes=True)

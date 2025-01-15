@@ -1,6 +1,5 @@
 # pylint: disable=import-error
 from fastapi import APIRouter, Response, status
-from pydantic import BaseModel
 
 from app.dependencies import UOWDep, UserAuthDep
 from app.schemas.schema_strategies import (
@@ -15,21 +14,16 @@ router = APIRouter(
 )
 
 
-class StrategyAdded(BaseModel):
-    id: int
-
-
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    response_model=StrategyAdded,
+    response_model=StrategySchema,
     summary="Add and deploy a new strategy",
 )
 async def add_strategy(
     strategy_draft: StrategyDraftSchemaAdd, uow: UOWDep, user: UserAuthDep
-) -> StrategyAdded:
-    strategy_id = await StrategiesService().add_strategy(uow, strategy_draft, user)
-    return StrategyAdded(id=strategy_id)
+) -> StrategySchema:
+    return await StrategiesService().add_strategy(uow, strategy_draft, user)
 
 
 @router.get(

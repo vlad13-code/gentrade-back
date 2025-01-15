@@ -4,9 +4,6 @@ from app.db.models._common import intpk, created_at, updated_at
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 
-# Import the module where StrategiesORM is defined
-from app.db.models.strategies import StrategiesORM  # noqa: F401
-
 
 class ChatsORM(Base):
     __tablename__ = "chats"
@@ -21,6 +18,7 @@ class ChatsORM(Base):
     updatedAt: Mapped[updated_at]
 
     user = relationship("UsersORM", back_populates="chats")
+    strategies = relationship("StrategiesORM", back_populates="chat")
 
     def __repr__(self):
         return f"<ChatsORM id={self.id}, thread_id={self.thread_id}, user_id={self.user_id} createdAt={self.createdAt},>"

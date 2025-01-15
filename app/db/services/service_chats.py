@@ -12,14 +12,17 @@ class ChatsService:
     @require_user
     async def add_chat(
         self, uow: IUnitOfWork, chat: ChatSchemaAddUpdate, user: UsersORM
-    ) -> int:
+    ) -> ChatListItemSchema:
         async with uow:
             chat.user_id = user.id
             chat_dict = chat.model_dump()
             try:
-                chat_id = await uow.chats.add_one(chat_dict)
+                chat = await uow.chats.add_one(chat_dict)
                 await uow.commit()
-                return chat_id
+                chat_list_item = ChatListItemSchema.model_validate(
+                    chat, from_attributes=True
+                )
+                return chat_list_item
             except Exception as e:
                 logging.error(f"Error adding chat: {e}")
                 raise HTTPException(

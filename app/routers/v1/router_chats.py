@@ -1,6 +1,5 @@
 # pylint: disable=import-error
-from fastapi import APIRouter, Response, status
-from pydantic import BaseModel
+from fastapi import APIRouter, status
 
 from app.dependencies import UOWDep, UserAuthDep
 from app.schemas.schema_chats import (
@@ -16,21 +15,17 @@ router = APIRouter(
 )
 
 
-class ChatAdded(BaseModel):
-    chat_id: int
-
-
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    response_model=ChatAdded,
+    response_model=ChatListItemSchema,
     summary="Add a new chat history",
 )
 async def add_chat(
     chat: ChatSchemaAddUpdate, uow: UOWDep, user: UserAuthDep
-) -> ChatAdded:
-    chat_id = await ChatsService().add_chat(uow, chat, user)
-    return ChatAdded(chat_id=chat_id)
+) -> ChatListItemSchema:
+    chat = await ChatsService().add_chat(uow, chat, user)
+    return chat
 
 
 @router.patch(
