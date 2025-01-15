@@ -21,7 +21,7 @@ class SQLAlchemyRepository(AbstractRepository):
         self.session = session
 
     async def add_one(self, data: dict) -> int:
-        stmt = insert(self.model).values(**data).returning(self.model.id)
+        stmt = insert(self.model).values(**data).returning(self.model)
         res = await self.session.execute(stmt)
         return res.scalar_one()
 

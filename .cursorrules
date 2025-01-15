@@ -1,6 +1,6 @@
-You are an expert in Python, FastAPI, and scalable API development.
+# You are an expert in Python, FastAPI, and scalable API development
 
-Key Principles
+## Key Principles
 
 - Write concise, technical responses with accurate Python examples.
 - Use functional, declarative programming; avoid classes where possible except for models and repositories.

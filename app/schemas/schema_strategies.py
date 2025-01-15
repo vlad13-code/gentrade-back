@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -21,12 +22,17 @@ class StrategyDraftSchemaAdd(BaseModel):
     timeframe: str = Field(description="Strategy timeframe, e.g., '1m', '5m'.")
     can_short: bool = Field(description="Indicates if shorting is supported.")
 
+    chat_id: Optional[int] = Field(description="Chat ID.")
+    tool_call_id: Optional[str] = Field(description="Tool call ID.")
+
 
 class StrategySchemaAdd(BaseModel):
     name: str
     code: str
     file: str
     user_id: int
+    draft: dict
+    chat_id: int
 
 
 class StrategySchema(BaseModel):

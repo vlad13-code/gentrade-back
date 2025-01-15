@@ -11,6 +11,7 @@ from app.config import settings
 from app.db.db import Base
 from app.db.models.chats import ChatsORM  # noqa: F401
 from app.db.models.strategies import StrategiesORM  # noqa: F401
+from app.db.models.backtests import BacktestsORM  # noqa: F401
 from app.db.models.langgraph.store import Store  # noqa: F401
 from app.db.models.langgraph.checkpoint import Checkpoint  # noqa: F401
 from app.db.models.langgraph.checkpoint_blob import CheckpointBlob  # noqa: F401

@@ -14,6 +14,7 @@ from app.db.repositories.langgraph.repo_langgraph_checkpoint import CheckpointRe
 from app.db.repositories.repo_chats import ChatsRepository
 from app.db.repositories.repo_strategies import StrategiesRepository
 from app.db.repositories.repo_users import UsersRepository
+from app.db.repositories.repo_backtests import BacktestsRepository
 
 
 # https://github1s.com/cosmicpython/code/tree/chapter_06_uow
@@ -21,6 +22,7 @@ class IUnitOfWork(ABC):
     chats: Type[ChatsRepository]
     users: Type[UsersRepository]
     strategies: Type[StrategiesRepository]
+    backtests: Type[BacktestsRepository]
     checkpoint_write: Type[CheckpointWriteRepository]
     checkpoint_blob: Type[CheckpointBlobRepository]
     checkpoint: Type[CheckpointRepository]
