@@ -2,7 +2,6 @@ from fastapi import APIRouter
 
 from app.dependencies import UOWDep, UserAuthDep
 from app.db.services.service_backtests import BacktestsService
-from app.db.models.backtests import BacktestsORM
 from app.schemas.schema_backtests import (
     BacktestStartSchema,
     BacktestCreated,

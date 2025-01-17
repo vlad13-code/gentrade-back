@@ -37,7 +37,7 @@ class StrategiesService:
                 await uow.chats.edit_one(chat.id, {"messages": chat.messages})
             except Exception:
                 # Chat already deleted
-                return False
+                pass
 
             await uow.strategies.delete_one(id)
             await uow.commit()

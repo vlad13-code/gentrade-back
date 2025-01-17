@@ -46,7 +46,7 @@ async def _run_backtest(
                 backtest.status = "finished"
             await session.commit()
 
-        except Exception as e:
+        except Exception:
             # Mark backtest as failed
             backtest = await session.get(BacktestsORM, backtest_id)
             if backtest:

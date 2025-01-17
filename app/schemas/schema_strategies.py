@@ -38,5 +38,6 @@ class StrategySchemaAdd(BaseModel):
 class StrategySchema(BaseModel):
     id: int
     name: str
+    draft: StrategyDraftSchemaAdd
     createdAt: datetime
     updatedAt: datetime

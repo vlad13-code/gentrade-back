@@ -67,6 +67,15 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+@app.exception_handler(Exception)
+async def exception_handler(request: Request, exc: Exception):
+    print(exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=jsonable_encoder({"detail": str(exc)}),
+    )
+
+
 # TODO: Add checking for a human feedback here and update the state if needed. Decide doing it here or in the deps
 async def check_thread_id(config: dict, request: Request):
     if "threadid" in request.headers:
