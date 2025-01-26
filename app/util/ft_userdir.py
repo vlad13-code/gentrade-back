@@ -21,7 +21,12 @@ def get_user_data_directory(user_id: str) -> str:
     if not user_id:
         raise ValueError("User ID cannot be empty.")
 
-    return os.path.join(settings.FT_USERDATA_DIR, user_id)
+    if not user_id.startswith("user_"):
+        user_data_dir = os.path.join(settings.FT_USERDATA_DIR, f"user_{user_id}")
+    else:
+        user_data_dir = os.path.join(settings.FT_USERDATA_DIR, user_id)
+
+    return user_data_dir
 
 
 def user_dir_exists(user_id: str) -> bool:
@@ -58,14 +63,26 @@ def init_ft_userdir(user_id: str):
     user_dir = get_user_data_directory(user_id)
     os.makedirs(user_dir, exist_ok=True)
 
-    template_path = os.path.join(settings.FT_USERDATA_DIR, "docker-compose.template")
-    with open(template_path, "r") as template_file:
+    # Create docker-compose.yml
+    docker_template_path = os.path.join(
+        settings.FT_USERDATA_DIR, "docker-compose.template"
+    )
+    with open(docker_template_path, "r") as template_file:
         content = template_file.read()
     content = content.replace("$user_id", user_id)
-
     docker_compose_path = os.path.abspath(os.path.join(user_dir, "docker-compose.yml"))
     with open(docker_compose_path, "w") as docker_compose_file:
         docker_compose_file.write(content)
+
+    # Create config.json
+    config_template_path = os.path.join(
+        settings.FT_USERDATA_DIR, "config.json.template"
+    )
+    with open(config_template_path, "r") as template_file:
+        content = template_file.read()
+    config_path = os.path.abspath(os.path.join(user_dir, "user_data", "config.json"))
+    with open(config_path, "w") as config_file:
+        config_file.write(content)
 
     docker = DockerClient(
         compose_files=[docker_compose_path],

@@ -36,11 +36,18 @@ class BacktestsService:
                 date_range=date_range,
                 status="running",
             )
-            backtest: BacktestsORM = await uow.backtests.add_one(new_backtest)
+            backtest: BacktestsORM = await uow.backtests.add_one(
+                new_backtest.model_dump()
+            )
             await uow.commit()
 
-        # Enqueue Celery task (non-async call)
-        run_backtest_task.delay(backtest.id, strategy_id, user.clerk_id, date_range)
+        # Enqueue Celery task using async pattern
+        await run_backtest_task.apply_async(
+            backtest_id=backtest.id,
+            strategy_id=strategy_id,
+            clerk_id=user.clerk_id,
+            date_range=date_range,
+        )
         return BacktestSchema.model_validate(backtest, from_attributes=True)
 
     @require_user

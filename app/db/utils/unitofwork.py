@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Type
+from contextlib import asynccontextmanager
 
 # pylint: disable=import-error
 
-from app.db.db import async_session_maker
+from app.db.db import async_session_maker, async_scoped_session_maker
 from app.db.repositories.langgraph.repo_langgraph_checkpoint_write import (
     CheckpointWriteRepository,
 )
@@ -54,10 +55,12 @@ class UnitOfWork:
 
         self.users = UsersRepository(self.session)
         self.strategies = StrategiesRepository(self.session)
+        self.backtests = BacktestsRepository(self.session)
         self.chats = ChatsRepository(self.session)
         self.checkpoint_write = CheckpointWriteRepository(self.session)
         self.checkpoint_blob = CheckpointBlobRepository(self.session)
         self.checkpoint = CheckpointRepository(self.session)
+        return self
 
     async def __aexit__(self, *args):
         await self.rollback()
@@ -68,3 +71,23 @@ class UnitOfWork:
 
     async def rollback(self):
         await self.session.rollback()
+
+
+class ScopedUnitOfWork(UnitOfWork):
+    def __init__(self):
+        self.session_factory = async_scoped_session_maker
+        self.session = None
+
+    async def __aexit__(self, *args):
+        await self.rollback()
+        await self.session_factory.remove()
+
+    async def remove(self):
+        await self.session_factory.remove()
+
+
+@asynccontextmanager
+async def get_scoped_uow():
+    uow = ScopedUnitOfWork()
+    async with uow:
+        yield uow

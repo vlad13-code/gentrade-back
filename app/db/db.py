@@ -1,10 +1,20 @@
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    async_sessionmaker,
+    create_async_engine,
+    async_scoped_session,
+)
 from sqlalchemy.orm import DeclarativeBase
+from asyncio import current_task
 
 from app.config import settings
 
 async_engine = create_async_engine(url=settings.DATABASE_URL_asyncpg)
 async_session_maker = async_sessionmaker(async_engine, expire_on_commit=False)
+
+# Create scoped session factory
+async_scoped_session_maker = async_scoped_session(
+    async_session_maker, scopefunc=current_task
+)
 
 
 class Base(DeclarativeBase):

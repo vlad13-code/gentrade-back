@@ -1,54 +1,77 @@
-import asyncio
-from app.celery_app import celery_app
-from app.db.db import async_session_maker
-from app.db.models.backtests import BacktestsORM
+import logging
+from typing import Optional
+from app.celery_async import AsyncTask, celery_app
+
 from app.db.models.strategies import StrategiesORM
+from app.db.utils.unitofwork import get_scoped_uow
 from app.util.ft_backtesting import run_backtest_in_docker
 
-
-@celery_app.task
-def run_backtest_task(
-    backtest_id: int, strategy_id: int, clerk_id: str, date_range: str
-):
-    """
-    Runs in the Celery worker. We do a mini async bridging via asyncio.run(...)
-    """
-    asyncio.run(_run_backtest(backtest_id, strategy_id, clerk_id, date_range))
+# Configure basic logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 
-async def _run_backtest(
-    backtest_id: int, strategy_id: int, clerk_id: str, date_range: str
-):
+@celery_app.task(bind=True)
+async def run_backtest_task(
+    self: AsyncTask,
+    backtest_id: int,
+    strategy_id: int,
+    clerk_id: str,
+    date_range: str,
+    **kwargs,
+) -> dict:
     """
-    The actual backtest execution logic:
-    1. Get the strategy file path
-    2. Run freqtrade backtest in Docker
-    3. Update the backtest record with results
+    Runs in the Celery worker. Uses our async task implementation.
+    Returns the backtest result on success.
+    Raises exceptions on failure which are handled by the AsyncTask base class.
     """
-    async with async_session_maker() as session:
-        strategy = await session.get(StrategiesORM, strategy_id)
+    self.update_state(state="PROGRESS", meta={"status": "Starting backtest"})
+
+    async with get_scoped_uow() as uow:
+        # Get strategy
+        strategy: Optional[StrategiesORM] = await uow.strategies.find_one(
+            id=strategy_id
+        )
         if not strategy:
-            # Can't do anything if strategy is gone
-            return
+            raise ValueError(f"Strategy {strategy_id} not found")
 
-        # 1. Run freqtrade backtest
+        logger.info(
+            f"Running backtest {backtest_id} for strategy {strategy_id} with clerk_id {clerk_id}"
+        )
+
         try:
+            # Run freqtrade backtest
             result_file_path = run_backtest_in_docker(
-                strategy_file_path=strategy.file,
+                strategy_class_name=strategy.file.replace(".py", ""),
                 clerk_id=clerk_id,
                 date_range=date_range,
             )
 
-            # 2. Update DB with success
-            backtest = await session.get(BacktestsORM, backtest_id)
-            if backtest:
-                backtest.file = result_file_path
-                backtest.status = "finished"
-            await session.commit()
+            # Update backtest with success
+            backtest = await uow.backtests.find_one(id=backtest_id)
+            if not backtest:
+                raise ValueError(f"Backtest {backtest_id} not found")
 
-        except Exception:
+            await uow.backtests.edit_one(
+                backtest_id, {"file": result_file_path, "status": "finished"}
+            )
+            await uow.commit()
+
+            return {
+                "state": "success",
+                "backtest_id": backtest_id,
+                "strategy_id": strategy_id,
+                "result_file": result_file_path,
+            }
+
+        except Exception as e:
+            logger.error(f"Error running backtest: {e}")
             # Mark backtest as failed
-            backtest = await session.get(BacktestsORM, backtest_id)
+            backtest = await uow.backtests.find_one(id=backtest_id)
             if backtest:
-                backtest.status = "failed"
-            await session.commit()
+                await uow.backtests.edit_one(backtest_id, {"status": "failed"})
+                await uow.commit()
+            # Re-raise the exception to be handled by AsyncTask
+            raise

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     DB_PASS: str
     DB_NAME: str
 
+    CELERY_BROKER_URL: str
+    CELERY_RESULT_BACKEND: str
+
     LANGCHAIN_API_KEY: str
     LANGCHAIN_CALLBACKS_BACKGROUND: bool
     LANGCHAIN_TRACING_V2: bool
