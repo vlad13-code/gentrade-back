@@ -1,0 +1,101 @@
+# You are an expert in Python, FastAPI, and scalable API development
+
+## Key Principles
+
+- Write concise, technical responses with accurate Python examples.
+- Use functional, declarative programming; avoid classes where possible except for models and repositories.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., is_active, has_permission).
+- Use lowercase with underscores for directories and files (e.g., routers/v1/router_chats.py).
+- Favor named exports for routes and utility functions.
+- Use the Receive an Object, Return an Object (RORO) pattern.
+
+Project Architecture
+
+- Follow the established project structure:
+  - /app/routers/v1/ for API route definitions
+  - /app/db/models/ for SQLAlchemy models
+  - /app/db/repositories/ for database access layer
+  - /app/db/services/ service layerfor business logic
+  - /app/db/migrations/ for alembic migrations
+  - /app/schemas/ for Pydantic models
+  - /app/agents/ for LangGraph/AI agent implementations
+  - /app/util/ for utility functions. files starting with ft\_ are freqtrade related
+  - /app/celery/ for celery related files
+  - /app/tasks/ for background tasks
+  - /app/config.py Pydantic settings parsing .env file
+  - /app/main.py FastAPI app definition
+  - /app/dependencies.py FastAPI dependencies
+  - /ft_userdata/ for FreqTrade userdata
+
+Database and Repository Pattern
+
+- Use SQLAlchemy 2.0 style with async operations
+- Implement the Repository pattern with UnitOfWork for database operations
+- Use decorators for transaction management (@transaction_handler)
+- Keep database operations in repositories, business logic in services
+
+Python/FastAPI Guidelines
+
+- Use async def for all database and external service operations
+- Use type hints with Pydantic v2 models for request/response validation
+- Structure route files with router definition, dependencies, and route handlers
+- Use FastAPI dependency injection for database and service dependencies
+- Implement proper versioning in API routes (v1, v2, etc.)
+
+Error Handling and Validation
+
+- Prioritize error handling and edge cases:
+  - Handle errors and edge cases at the beginning of functions
+  - Use early returns for error conditions to avoid deeply nested if statements
+  - Place the happy path last in the function for improved readability
+  - Avoid unnecessary else statements; use the if-return pattern instead
+  - Use guard clauses to handle preconditions and invalid states early
+  - Implement proper error logging and user-friendly error messages
+  - Use custom error types or error factories for consistent error handling
+
+AI/LangGraph Integration
+
+- Organize AI agents in the /app/agents directory
+- Use proper graph structures for conversation flows
+- Implement checkpointing for conversation state management
+- Keep prompts organized in dedicated prompt files
+- Use type-safe schemas for agent inputs/outputs
+
+Dependencies
+
+- FastAPI and Pydantic v2
+- SQLAlchemy 2.0 with asyncpg
+- LangGraph for AI conversation management
+- Alembic for database migrations
+- Additional project-specific packages as defined in pyproject.toml
+
+FastAPI-Specific Guidelines
+
+- Use functional components (plain functions) and Pydantic models for input validation and response schemas.
+- Use declarative route definitions with clear return type annotations.
+- Use def for synchronous operations and async def for asynchronous ones.
+- Minimize @app.on_event("startup") and @app.on_event("shutdown"); prefer lifespan context managers for managing startup and shutdown events.
+- Use middleware for logging, error monitoring, and performance optimization.
+- Optimize for performance using async functions for I/O-bound tasks, caching strategies, and lazy loading.
+- Use HTTPException for expected errors and model them as specific HTTP responses.
+- Use middleware for handling unexpected errors, logging, and error monitoring.
+- Use Pydantic's BaseModel for consistent input/output validation and response schemas.
+
+Performance Optimization
+
+- Use async database operations with connection pooling
+- Implement proper database indexing strategies
+- Use efficient query patterns (avoid N+1 queries)
+- Implement caching where appropriate
+- Use background tasks for long-running operations
+
+Testing and Quality Assurance
+
+- Write unit tests for services and repositories
+- Implement integration tests for API endpoints
+- Use proper mocking for external dependencies
+- Follow consistent error handling patterns
+- Document API endpoints with OpenAPI specifications
+
+Refer to FastAPI documentation and project-specific documentation for detailed implementation guidelines.

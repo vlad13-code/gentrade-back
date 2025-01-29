@@ -1,94 +1,161 @@
-# You are an expert in Python, FastAPI, and scalable API development
+# Project Rules
 
-## Key Principles
+## Project Information
 
-- Write concise, technical responses with accurate Python examples.
-- Use functional, declarative programming; avoid classes where possible except for models and repositories.
-- Prefer iteration and modularization over code duplication.
-- Use descriptive variable names with auxiliary verbs (e.g., is_active, has_permission).
-- Use lowercase with underscores for directories and files (e.g., routers/v1/router_chats.py).
-- Favor named exports for routes and utility functions.
-- Use the Receive an Object, Return an Object (RORO) pattern.
+- **Version**: 1.0.0
+- **Last Updated**: January 29, 2025 at 12:40 PM
+- **Name**: gentrade-back
+- **Language**: python
+- **Framework**: FastApi, Langchain
+- **Type**: application
 
-Project Architecture
+## Project Description
 
-- Follow the established project structure:
-  - /app/routers/v1/ for API route definitions
-  - /app/db/models/ for SQLAlchemy models
-  - /app/db/repositories/ for database access layer
-  - /app/db/services/ for business logic
-  - /app/schemas/ for Pydantic models
-  - /app/agents/ for LangGraph/AI agent implementations
-  - /app/util/ for utility functions. files starting with ft\_ are freqtrade related
+This project is a backend application designed to facilitate the creation, management, and backtesting of cryptocurrency trading strategies using Freqtrade, leveraging AI agents for strategy generation. It provides a comprehensive API for users to interact with their strategies, chat histories, and backtesting results, utilizing a microservices architecture with Celery for task management and Langchain for AI-driven features. The application uniquely combines user-defined strategies with AI-generated components, aiming to empower traders with both custom and intelligent trading tools.
 
-Database and Repository Pattern
+## AI Behavior Rules
 
-- Use SQLAlchemy 2.0 style with async operations
-- Implement the Repository pattern with UnitOfWork for database operations
-- Use decorators for transaction management (@transaction_handler)
-- Keep database operations in repositories, business logic in services
+### Code Generation Style
 
-Python/FastAPI Guidelines
+#### Preferred Patterns
 
-- Use async def for all database and external service operations
-- Use type hints with Pydantic v2 models for request/response validation
-- Structure route files with router definition, dependencies, and route handlers
-- Use FastAPI dependency injection for database and service dependencies
-- Implement proper versioning in API routes (v1, v2, etc.)
+- Use of f-strings for string formatting.
+- Type hinting for function parameters and return values.
+- Use of Pydantic for data validation and settings management.
+- Use of async/await for asynchronous operations.
+- Use of FastAPI for web framework.
+- Use of snake_case for variable and function names.
+- Use of PascalCase for class names.
+- Use of UPPER_SNAKE_CASE for constants.
+- Use of docstrings for documenting functions and classes.
+- Use of consistent indentation (4 spaces).
+- Use of list comprehension where appropriate.
+- Use of descriptive variable names.
 
-Error Handling and Validation
+#### Patterns to Avoid
 
-- Prioritize error handling and edge cases:
-  - Handle errors and edge cases at the beginning of functions
-  - Use early returns for error conditions to avoid deeply nested if statements
-  - Place the happy path last in the function for improved readability
-  - Avoid unnecessary else statements; use the if-return pattern instead
-  - Use guard clauses to handle preconditions and invalid states early
-  - Implement proper error logging and user-friendly error messages
-  - Use custom error types or error factories for consistent error handling
+- Magic numbers or strings.
+- Hardcoded paths or configurations.
+- Inconsistent naming conventions.
+- Synchronous operations in asynchronous contexts.
+- Unnecessary complexity.
+- Global variables.
+- Inconsistent usage of imports
 
-AI/LangGraph Integration
+### Error Handling
 
-- Organize AI agents in the /app/agents directory
-- Use proper graph structures for conversation flows
-- Implement checkpointing for conversation state management
-- Keep prompts organized in dedicated prompt files
-- Use type-safe schemas for agent inputs/outputs
+#### Preferred Patterns
 
-Dependencies
+- Use of try-except blocks for handling exceptions.
+- Specific exception handling where possible (e.g., IntegrityError, ValidationError).
+- Returning JSON responses with appropriate status codes for errors.
+- Logging exceptions with detailed messages.
+- Raising exceptions to be handled by parent functions or exception handlers.
 
-- FastAPI and Pydantic v2
-- SQLAlchemy 2.0 with asyncpg
-- LangGraph for AI conversation management
-- Alembic for database migrations
-- Additional project-specific packages as defined in pyproject.toml
+#### Patterns to Avoid
 
-FastAPI-Specific Guidelines
+- Bare except clauses.
+- Ignoring exceptions without proper handling.
+- Returning generic error messages without context.
+- Unnecessary nesting of try/except blocks.
 
-- Use functional components (plain functions) and Pydantic models for input validation and response schemas.
-- Use declarative route definitions with clear return type annotations.
-- Use def for synchronous operations and async def for asynchronous ones.
-- Minimize @app.on_event("startup") and @app.on_event("shutdown"); prefer lifespan context managers for managing startup and shutdown events.
-- Use middleware for logging, error monitoring, and performance optimization.
-- Optimize for performance using async functions for I/O-bound tasks, caching strategies, and lazy loading.
-- Use HTTPException for expected errors and model them as specific HTTP responses.
-- Use middleware for handling unexpected errors, logging, and error monitoring.
-- Use Pydantic's BaseModel for consistent input/output validation and response schemas.
+### Performance
 
-Performance Optimization
+#### Preferred Patterns
 
-- Use async database operations with connection pooling
-- Implement proper database indexing strategies
-- Use efficient query patterns (avoid N+1 queries)
-- Implement caching where appropriate
-- Use background tasks for long-running operations
+- Use of asynchronous database operations.
+- Use of connection pooling for database connections.
+- Use of Celery for background tasks.
+- Lazy loading for expensive operations.
+- Efficient data structures and algorithms.
+- Minimizing database queries.
 
-Testing and Quality Assurance
+#### Patterns to Avoid
 
-- Write unit tests for services and repositories
-- Implement integration tests for API endpoints
-- Use proper mocking for external dependencies
-- Follow consistent error handling patterns
-- Document API endpoints with OpenAPI specifications
+- Synchronous database operations in asynchronous contexts.
+- Unnecessary database queries.
+- Blocking operations in asynchronous contexts.
+- Inefficient algorithms or data structures.
 
-Refer to FastAPI documentation and project-specific documentation for detailed implementation guidelines.
+### Module Organization
+
+#### Structure
+
+- The project is structured into several directories: `app`, `tests`, `alembic`.
+- The `app` directory contains the main application code.
+- The `app` directory is further divided into subdirectories such as `agents`, `config`, `db`, `dependencies`, `routers`, `schemas`, `tasks`, `util`.
+- `app/agents` contains code related to AI agents, including models, graphs, and tools.
+- `app/config` contains configuration settings.
+- `app/db` contains database-related code, including models, migrations, and utils.
+- `app/dependencies` contains dependency injection logic.
+- `app/routers` contains API endpoint definitions.
+- `app/schemas` contains Pydantic schemas for data validation.
+- `app/tasks` contains Celery task definitions.
+- `app/util` contains utility functions.
+
+#### Dependencies
+
+- FastAPI is used as the main web framework.
+- Pydantic is used for data validation and settings management.
+- SQLAlchemy is used for database interaction.
+- Celery is used for background task management.
+- Langchain is used for AI agent functionality.
+- Psycopg and Asyncpg are used for database drivers.
+- Svix is used for webhook verification.
+- Python-on-whales is used for Docker interactions.
+- Dotenv is used for loading environment variables.
+
+#### Module Responsibilities
+
+- **app/config.py**: Loads and manages application settings from environment variables.
+- **app/main.py**: Sets up the FastAPI application, including middleware, exception handlers, and routes, and the lifespan for the main agent.
+- **app/dependencies.py**: Defines FastAPI dependency injection functions for authentication, database, and Celery.
+- **app/routers/v1/router_users.py**: Handles API endpoints for user creation.
+- **app/routers/v1/router_webhooks.py**: Handles incoming webhook events, specifically from Clerk.
+- **app/routers/v1/router_backtests.py**: Handles API endpoints for backtest creation and retrieval.
+- **app/routers/v1/router_chats.py**: Handles API endpoints for chat history management.
+- **app/routers/v1/router_strategies.py**: Handles API endpoints for strategy creation, retrieval and deletion.
+- **app/tasks/backtests.py**: Defines Celery tasks for running backtests.
+- **app/util/ft_userdir.py**: Manages user directories for Freqtrade data.
+- **app/util/ft_strategies.py**: Manages user strategies files.
+- **app/util/ft_backtesting.py**: Runs Freqtrade backtests in Docker containers.
+- **app/util/exceptions.py**: Defines custom exception classes.
+- **app/dependencies/celery.py**: Defines Celery dependency injection.
+- **app/agents/model.py**: Initializes the language model.
+- **app/agents/main/graph_main.py**: Defines the main agent graph and logic.
+- **app/agents/main/schemas.py**: Defines Pydantic schemas for main agent.
+- **app/agents/main/tools/calculator.py**: Defines a calculator tool for the AI agent.
+- **app/agents/main/prompts/base.py**: Defines prompts for the main agent.
+- **app/agents/strategy/graph_strategy_code.py**: Defines the graph for strategy code generation.
+- **app/agents/strategy/graph_strategy_draft.py**: Defines the graph for strategy draft creation.
+- **app/agents/strategy/schemas.py**: Defines schemas for strategy agent.
+- **app/agents/strategy/tools/strategy_draft_output.py**: Defines the strategy draft output tool for the AI agent.
+- **app/agents/strategy/prompts/strategy_code.py**: Defines prompts for the strategy code generation agent.
+- **app/agents/strategy/prompts/base.py**: Defines prompts for the strategy draft agent.
+- **app/schemas/schema_chats.py**: Defines Pydantic schemas for chat data.
+- **app/schemas/schema_backtests.py**: Defines Pydantic schemas for backtest data.
+- **app/schemas/schema_strategies.py**: Defines Pydantic schemas for strategy data.
+- **app/schemas/schema_clerk_webhook_event.py**: Defines Pydantic schemas for Clerk webhook data.
+- **app/schemas/schema_users.py**: Defines Pydantic schemas for user data.
+- **app/db/db.py**: Sets up the SQLAlchemy database connection and session management.
+- **app/db/migrations**: Contains Alembic migrations for database schema changes.
+
+#### Rules
+
+- Use of FastAPI's dependency injection for managing resources like database connections and authentication.
+- Consistent use of Pydantic for data validation and serialization.
+- Asynchronous operations using async/await throughout the codebase.
+- Clear separation of concerns into modules based on functionality.
+- Use of a Unit of Work pattern for database interactions.
+- Use of Celery for handling background tasks.
+- Use of Langchain for AI agent functionality.
+- Consistent use of logging for debugging and monitoring.
+- Use of Docker for containerization and backtesting.
+
+#### Naming Conventions
+
+- **classes**: PascalCase (e.g., Settings, UserSchema, BacktestService)
+- **functions**: snake_case (e.g., add_user, get_chat_list, run_backtest_task)
+- **variables**: snake_case (e.g., user_id, strategy_name, db_host)
+- **constants**: UPPER_SNAKE_CASE (e.g., HTTP_201_CREATED, WH_SECRET)
+- **files**: snake_case (e.g., ft_userdir.py, router_users.py)

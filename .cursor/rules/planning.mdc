@@ -1,0 +1,101 @@
+---
+description: Planning a change in the codebase
+globs: 
+---
+
+# Feature Planning Template
+DO NOT GENERATE ANY CODE! TEXT DESCRIPTION ONLY! WRITE THIS PLAN TO `documentation/dev_plan.md` FILE.
+
+## 1. Feature Summary
+**Objective**: [Clear one-sentence description]
+
+**Scope**: 
+- [In scope items]
+- [Out of scope items]
+
+## 2. Codebase Audit
+**Existing implementations**:
+- [Relevant existing routes/models/services]
+- [Potential conflicts]
+
+**Shared components**:
+- [Database models to extend]
+- [Services to modify]
+- [Existing schemas to leverage]
+
+## 3. Architectural Alignment
+**Possible project structure impact**:
+```plaintext
+/app/routers/v1/[feature].py
+/app/schemas/[feature].py
+/app/services/[feature]_service.py
+```
+
+**Dependencies**:
+- Database: [PostgreSQL/Redis/etc]
+- Services: [Existing services to integrate]
+- AI: [LangGraph/LlamaIndex/etc]
+
+## 4. Implementation Blueprint
+**Core components**:
+```plaintext
+[Component Name] (Type: router/service/schema)
+- Responsibility: 
+- Dependencies:
+- Lifecycle: [Request-scoped/Singleton]
+```
+
+**Flow Design**:
+1. [API Endpoint] -> [Service Layer] -> [Repository]
+2. [AI Agent Integration Points]
+3. [Background Task Triggers]
+
+## 5. Phase Implementation
+
+### Phase 1: Foundation
+1. Create base schemas in `/app/schemas`
+2. Add repository methods with UoW pattern
+3. Implement service layer with transaction handling
+
+### Phase 2: Integration
+1. Add FastAPI router with dependency injection
+2. Configure OpenAPI documentation
+3. Implement error handling middleware
+
+### Phase 3: Optimization
+1. Add database indexes
+2. Implement query batching
+3. Add caching layer
+
+## 6. Compatibility Strategy
+**Migration Needs**:
+- [Database schema changes]
+- [API versioning approach]
+- [Deprecation plan]
+
+**Testing Surface**:
+- Unit: [Critical paths]
+- Integration: [Service boundaries]
+- E2E: [User flows]
+
+## 7. Security & Performance
+**Considerations**:
+- Rate limiting strategy
+- Permission checks
+- Query optimization plan
+- Async I/O boundaries
+
+## 8. Confidence Assessment
+**Risk Factors**:  
+- [Complex integrations]
+- [Data migration challenges]
+
+**Validation Plan**:
+- [Testing approach]
+- [Monitoring metrics]
+- [Fallback strategy]
+
+## 9. Open Questions
+1. [Unresolved architecture decisions]
+2. [Potential performance bottlenecks]
+3. [Edge case handling needs]

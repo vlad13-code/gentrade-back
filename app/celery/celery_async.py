@@ -1,8 +1,7 @@
 import asyncio
 import celery
 import celery.states
-from celery.exceptions import Reject
-from app.celery_rmq_connector import CeleryRMQConnector
+from app.celery.celery_rmq_connector import CeleryRMQConnector
 from app.config import settings
 import traceback
 import logging
