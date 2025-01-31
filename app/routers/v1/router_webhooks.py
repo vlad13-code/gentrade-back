@@ -8,7 +8,8 @@ from app.db.services.service_users import UsersService
 from app.dependencies import UOWDep
 from app.schemas.schema_clerk_webhook_event import ClerkWebhookEvent
 from app.schemas.schema_users import UserSchemaAdd
-from app.util.ft_userdir import init_ft_userdir, remove_ft_userdir
+from app.util.ft.ft_userdir import FTUserDir
+import logging
 
 settings = Settings()
 
@@ -54,18 +55,23 @@ async def clerk_webhook_handler(request: Request, response: Response, uow: UOWDe
                 ),
             )
             await UsersService().add_user(uow, user)
-            init_ft_userdir(user.clerk_id)
+            ft_userdir = FTUserDir(user.clerk_id)
+            ft_userdir.initialize()
             return
         elif clerk_event.type == "user.deleted":
-            remove_ft_userdir(clerk_event.data.id)
+            ft_userdir = FTUserDir(clerk_event.data.id)
+            ft_userdir.remove()
             await UsersService().delete_user(uow, clerk_event.data.id)
 
     except WebhookVerificationError as e:
+        logging.error(f"Webhook verification error in clerk_webhook_handler: {e}")
         response.status_code = status.HTTP_400_BAD_REQUEST
         return
     except ValidationError as e:
+        logging.error(f"Validation error in clerk_webhook_handler: {e}")
         response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
         return
     except IntegrityError as e:
+        logging.error(f"Integrity error in clerk_webhook_handler: {e}")
         response.status_code = status.HTTP_409_CONFLICT
         return

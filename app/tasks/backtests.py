@@ -1,10 +1,9 @@
 import logging
 from typing import Optional
-from app.celery_async import AsyncTask, celery_app
-
+from app.celery.celery_async import AsyncTask, celery_app
 from app.db.models.strategies import StrategiesORM
 from app.db.utils.unitofwork import get_scoped_uow
-from app.util.ft_backtesting import run_backtest_in_docker
+from app.util.ft.ft_backtesting import FTBacktesting
 
 # Configure basic logging
 logging.basicConfig(
@@ -43,9 +42,9 @@ async def run_backtest_task(
 
         try:
             # Run freqtrade backtest
-            result_file_path = run_backtest_in_docker(
+            ft_backtesting = FTBacktesting(clerk_id)
+            result_file_path = ft_backtesting.run_backtest(
                 strategy_class_name=strategy.file.replace(".py", ""),
-                clerk_id=clerk_id,
                 date_range=date_range,
             )
 

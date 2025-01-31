@@ -12,9 +12,8 @@ from app.db.utils.unitofwork import IUnitOfWork, UnitOfWork
 from app.schemas.schema_users import UserSchemaAuth
 from app.config import settings
 from typing import AsyncGenerator
-from fastapi import Depends
 
-from app.celery_rmq_connector import CeleryRMQConnector
+from app.celery.celery_rmq_connector import CeleryRMQConnector
 
 """
 Clerk authentication
