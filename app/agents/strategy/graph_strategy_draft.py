@@ -5,7 +5,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 
 from app.agents.strategy.tools.strategy_draft_output import strategy_draft_output_tool
 from app.agents.strategy.schemas import CreateStrategyDraftState, StrategyDraft
-from app.agents.strategy.prompts.base import strategy_draft_instructions
+from app.agents.strategy.prompts.strategy_draft import strategy_draft_instructions
 from app.agents.model import model
 
 
