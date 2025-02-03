@@ -4,6 +4,8 @@ from app.celery.celery_async import AsyncTask, celery_app
 from app.db.models.strategies import StrategiesORM
 from app.db.utils.unitofwork import get_scoped_uow
 from app.util.ft.ft_backtesting import FTBacktesting
+from app.util.ft.ft_market_data import FTMarketData
+from app.util.exceptions import DataDownloadTimeoutError
 
 # Configure basic logging
 logging.basicConfig(
@@ -41,6 +43,32 @@ async def run_backtest_task(
         )
 
         try:
+            # Update backtest status to downloading data
+            backtest = await uow.backtests.find_one(id=backtest_id)
+            if not backtest:
+                raise ValueError(f"Backtest {backtest_id} not found")
+
+            await uow.backtests.edit_one(backtest_id, {"status": "downloading_data"})
+            await uow.commit()
+
+            # Download market data
+            ft_market_data = FTMarketData(clerk_id)
+            try:
+                # TODO: Extract pairs and timeframes from strategy
+                # For now using default values
+                ft_market_data.download(
+                    pairs=["BTC/USDT"],  # This should come from strategy
+                    timeframes=["5m"],  # This should come from strategy
+                    date_range=date_range,
+                )
+            except Exception as e:
+                logger.error(f"Failed to download market data: {e}")
+                raise DataDownloadTimeoutError("Failed to download market data", e)
+
+            # Update status to running backtest
+            await uow.backtests.edit_one(backtest_id, {"status": "running"})
+            await uow.commit()
+
             # Run freqtrade backtest
             ft_backtesting = FTBacktesting(clerk_id)
             result_file_path = ft_backtesting.run_backtest(
@@ -49,10 +77,6 @@ async def run_backtest_task(
             )
 
             # Update backtest with success
-            backtest = await uow.backtests.find_one(id=backtest_id)
-            if not backtest:
-                raise ValueError(f"Backtest {backtest_id} not found")
-
             await uow.backtests.edit_one(
                 backtest_id, {"file": result_file_path, "status": "finished"}
             )
