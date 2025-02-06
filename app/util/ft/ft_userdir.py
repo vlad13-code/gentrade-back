@@ -1,7 +1,6 @@
 import os
 import shutil
 import logging
-from app.config import settings
 from .ft_base import FTBase
 
 
@@ -36,50 +35,10 @@ class FTUserDir(FTBase):
         if self.exists():
             return
 
-        self.ensure_user_dir_exists()
-
         try:
-            # Create docker-compose.yml
-            docker_template_path = os.path.join(
-                settings.FT_USERDATA_DIR, "docker-compose.template"
-            )
-            if not os.path.exists(docker_template_path):
-                raise FileNotFoundError(
-                    f"Template file not found: {docker_template_path}"
-                )
-
-            with open(docker_template_path, "r") as template_file:
-                content = template_file.read()
-            content = content.replace("$user_id", self.user_id)
-
-            with open(self.docker_compose_path, "w") as docker_compose_file:
-                docker_compose_file.write(content)
-
-            # Create config.json
-            config_template_path = os.path.join(
-                settings.FT_USERDATA_DIR, "config.json.template"
-            )
-            if not os.path.exists(config_template_path):
-                raise FileNotFoundError(
-                    f"Template file not found: {config_template_path}"
-                )
-
-            config_path = os.path.join(self.user_dir, "user_data", "config.json")
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-
-            with open(config_template_path, "r") as template_file:
-                content = template_file.read()
-
-            with open(config_path, "w") as config_file:
-                config_file.write(content)
-
-            # Initialize user directory using freqtrade
-            self.run_docker_command(
-                "freqtrade",
-                ["create-userdir", "--userdir", "user_data"],
-            )
-
-        except OSError as e:
+            self.initialize_from_templates()
+            self.ensure_user_dir_exists()
+        except (OSError, FileNotFoundError) as e:
             logging.error(f"Failed to initialize user directory: {e}", exc_info=True)
             self.remove()  # Clean up partially created directory
             raise OSError(f"Failed to initialize user directory: {e}") from e

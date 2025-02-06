@@ -5,7 +5,9 @@ from app.db.models.strategies import StrategiesORM
 from app.db.utils.unitofwork import get_scoped_uow
 from app.util.ft.ft_backtesting import FTBacktesting
 from app.util.ft.ft_market_data import FTMarketData
+from app.util.ft.ft_config import FTUserConfig
 from app.util.exceptions import DataDownloadTimeoutError
+from app.util.ft.verification.schemas import VerificationResult
 
 # Configure basic logging
 logging.basicConfig(
@@ -53,12 +55,11 @@ async def run_backtest_task(
 
             # Download market data
             ft_market_data = FTMarketData(clerk_id)
+            ft_user_config = FTUserConfig(clerk_id).read_config()
             try:
-                # TODO: Extract pairs and timeframes from strategy
-                # For now using default values
-                ft_market_data.download(
-                    pairs=["BTC/USDT"],  # This should come from strategy
-                    timeframes=["5m"],  # This should come from strategy
+                download_result: VerificationResult = ft_market_data.download(
+                    pairs=ft_user_config.exchange.pair_whitelist,
+                    timeframes=[strategy.draft["timeframe"]],
                     date_range=date_range,
                 )
             except Exception as e:
