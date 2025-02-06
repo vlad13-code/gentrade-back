@@ -43,8 +43,8 @@ class FTBacktesting(FTBase):
             "freqtrade",
             [
                 "backtesting",
-                "--userdir",
-                "user_data",
+                "--datadir",
+                "/freqtrade/common_data",
                 "--strategy",
                 strategy_class_name,
                 "--timerange",

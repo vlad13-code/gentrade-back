@@ -14,3 +14,12 @@ class PickleableDockerException(Exception):
 
     def __reduce__(self):
         return (self.__class__, (self.args[0], self.original_exception))
+
+
+class DataDownloadTimeoutError(Exception):
+    """Raised when data download times out."""
+
+    def __init__(self, message: str, original_error: Exception | None = None):
+        self.message = message
+        self.original_error = original_error
+        super().__init__(self.message)

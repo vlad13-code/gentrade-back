@@ -1,7 +1,6 @@
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
-from datetime import datetime
 
 from app.db.db import Base
 from app.db.models._common import intpk, created_at, updated_at
