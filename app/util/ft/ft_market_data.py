@@ -1,5 +1,7 @@
 import logging
 from typing import List
+
+from app.util.logger import setup_logger
 from .ft_base import FTBase
 from .verification.verifier import DataDownloadVerifier
 from .verification.schemas import VerificationResult
@@ -16,7 +18,7 @@ class FTMarketData(FTBase):
         super().__init__(user_id)
         self.ensure_user_dir_exists()
         self.verifier = DataDownloadVerifier(base_dir="ft_userdata")
-        self.logger = logging.getLogger(__name__)
+        self.logger = setup_logger(__name__)
 
     def _generate_expected_files(
         self, pairs: List[str], timeframes: List[str], trading_mode: str = "futures"
@@ -103,6 +105,16 @@ class FTMarketData(FTBase):
         # Generate expected file paths
         expected_files = self._generate_expected_files(pairs, timeframes, trading_mode)
 
+        # Check for already downloaded files
+        verification_result = self.verifier.verify_download(
+            expected_files=expected_files,
+            date_range=date_range,
+            timeframes=timeframes,
+        )
+        if verification_result.success:
+            self.logger.info("Market data already downloaded, skipping download")
+            return verification_result
+
         try:
             docker_command = [
                 "download-data",
@@ -122,11 +134,11 @@ class FTMarketData(FTBase):
 
             # Execute Docker command
             # docker_output = {"stdout": [], "stderr": []}
-            docker_output = self.run_docker_command("freqtrade", docker_command)
+            log_summary = self.run_docker_command("freqtrade", docker_command)
 
             # Verify the download
             verification_result = self.verifier.verify_download(
-                docker_result=docker_output,
+                docker_result=log_summary,
                 expected_files=expected_files,
                 date_range=date_range,
                 timeframes=timeframes,

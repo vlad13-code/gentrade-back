@@ -5,6 +5,9 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
+from app.util.ft.verification.log_parser import DockerLogSummary
+from ...logger import setup_logger
+
 from .exceptions import (
     DataIntegrityError,
     DockerExecutionError,
@@ -25,33 +28,44 @@ class DataDownloadVerifier:
             base_dir (str): Base directory where data files are stored
         """
         self.base_dir = Path(base_dir)
-        self.logger = logging.getLogger(__name__)
+        self.logger = setup_logger(__name__)
 
-    def verify_docker_execution(self, docker_result: dict) -> None:
+    def verify_docker_execution(self, docker_result: DockerLogSummary) -> None:
         """
         Verify Docker command execution success.
 
         Args:
-            docker_result (dict): Docker command execution result
+            docker_result (DockerLogSummary): Docker command execution result
 
         Raises:
             DockerExecutionError: If verification fails
         """
+        if docker_result.errors:
+            error_details = {
+                "total_errors": docker_result.total_errors,
+                "errors": [
+                    {
+                        "component": error.component,
+                        "message": error.message,
+                        "timestamp": error.timestamp.isoformat(),
+                    }
+                    for error in docker_result.errors
+                ],
+            }
+            self.logger.debug(
+                "Docker execution verification failed",
+                extra={"error_details": error_details},
+            )
+            raise DockerExecutionError(
+                "Docker command failed with error", details=error_details
+            )
 
-        # Check for error messages in stderr
-        stderr_lines = docker_result.get("stderr", [])
-        for line in stderr_lines:
-            if "ERROR" in line:
-                error_details = {
-                    "stderr": stderr_lines,
-                    "stdout": docker_result.get("stdout", []),
-                }
-                self.logger.debug(
-                    "Docker execution verification failed",
-                    extra={"error_details": error_details},
-                )
-                raise DockerExecutionError(
-                    "Docker command failed with error", details=error_details
+        # Log any warnings
+        if docker_result.warnings:
+            for warning in docker_result.warnings:
+                self.logger.warning(
+                    f"{warning.component}: {warning.message}",
+                    extra={"timestamp": warning.timestamp},
                 )
 
         self.logger.debug("Docker execution verification passed")
@@ -236,8 +250,8 @@ class DataDownloadVerifier:
 
     def verify_download(
         self,
-        docker_result: dict,
-        expected_files: List[str],
+        docker_result: Optional[DockerLogSummary] = None,
+        expected_files: List[str] = [],
         date_range: Optional[str] = None,
         timeframes: Optional[List[str]] = None,
     ) -> VerificationResult:
@@ -256,8 +270,9 @@ class DataDownloadVerifier:
         """
         try:
             # Step 1: Verify Docker execution
-            self.logger.debug("Step 1: Docker execution verification")
-            self.verify_docker_execution(docker_result)
+            if docker_result:
+                self.logger.debug("Step 1: Docker execution verification")
+                self.verify_docker_execution(docker_result)
 
             # Step 2: Verify files existence
             self.logger.debug("Step 2: File existence verification")

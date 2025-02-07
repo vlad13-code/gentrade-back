@@ -1,10 +1,12 @@
 import os
 import logging
+import pprint
 from typing import Optional
-from python_on_whales import DockerClient
-from sqlalchemy import false
+from python_on_whales import DockerClient, DockerException
 from app.config import settings
 from app.util.exceptions import PickleableDockerException
+from .verification.log_parser import DockerLogParser, DockerLogSummary
+from ..logger import setup_logger
 
 
 class FTBase:
@@ -26,6 +28,8 @@ class FTBase:
         self.strategies_dir = self._get_strategies_dir()
         self.docker_compose_path = os.path.join(self.user_dir, "docker-compose.yml")
         self._docker_compose_client: Optional[DockerClient] = None
+        self.logger = setup_logger(__name__)
+        self.log_parser = DockerLogParser()
 
     @property
     def docker(self) -> DockerClient:
@@ -96,6 +100,7 @@ class FTBase:
 
         with open(target_path, "w") as target_file:
             target_file.write(content)
+        logging.info(f"Created {target_path} from {template_path}")
 
     def initialize_from_templates(self) -> None:
         """
@@ -106,12 +111,6 @@ class FTBase:
             OSError: If file creation fails.
         """
         try:
-            # Initialize user directory using freqtrade
-            self.run_docker_command(
-                "freqtrade",
-                ["create-userdir", "--userdir", "user_data"],
-            )
-
             # Create docker-compose.yml
             self._create_from_template(
                 "docker-compose.template",
@@ -139,7 +138,7 @@ class FTBase:
 
     def run_docker_command(
         self, service: str, command: list[str], remove: bool = True
-    ) -> None:
+    ) -> DockerLogSummary:
         """
         Run a Docker command safely with proper error handling.
 
@@ -151,7 +150,7 @@ class FTBase:
         Raises:
             PickleableDockerException: If the Docker command fails.
         """
-        # logging.info(f"Running Docker command: {service} {' '.join(command)}")
+        logging.info(f"Running Docker command: {service} {' '.join(command)}")
 
         try:
             result = {"stdout": [], "stderr": []}
@@ -164,16 +163,29 @@ class FTBase:
             )
 
             for type, line in output_stream:
-                result[type].append(line.decode().strip())
+                result[type].append(line.decode())
 
-            return result
-        except Exception as e:
-            # logging.error(f"Docker command failed: {e}", exc_info=True)
+            # Parse logs for warnings and errors
+            log_summary = self.log_parser.process_docker_output(result)
+
+            # Log warnings
+            if log_summary.warnings:
+                for warning in log_summary.warnings:
+                    self.logger.warning(
+                        f"{warning.component}: {warning.message}",
+                        extra={"timestamp": warning.timestamp},
+                    )
+
+            return log_summary
+        except DockerException as e:
             if "TimeoutError" in str(e) or "RequestTimeout" in str(e):
-                logging.error(
+                self.logger.error(
                     "Connection timeout detected. Please check your network connection and try again."
                 )
-            raise PickleableDockerException("Docker command failed", e)
+            logs = {"stderr": e.stderr, "stdout": e.stdout}
+            log_summary = self.log_parser.process_docker_output(logs)
+
+            return log_summary
 
     @staticmethod
     def to_camel_case(strategy_name: str) -> str:

@@ -6,7 +6,6 @@ from app.db.utils.unitofwork import get_scoped_uow
 from app.util.ft.ft_backtesting import FTBacktesting
 from app.util.ft.ft_market_data import FTMarketData
 from app.util.ft.ft_config import FTUserConfig
-from app.util.exceptions import DataDownloadTimeoutError
 from app.util.ft.verification.schemas import VerificationResult
 
 # Configure basic logging
@@ -56,15 +55,24 @@ async def run_backtest_task(
             # Download market data
             ft_market_data = FTMarketData(clerk_id)
             ft_user_config = FTUserConfig(clerk_id).read_config()
-            try:
-                download_result: VerificationResult = ft_market_data.download(
-                    pairs=ft_user_config.exchange.pair_whitelist,
-                    timeframes=[strategy.draft["timeframe"]],
-                    date_range=date_range,
+            download_result: VerificationResult = ft_market_data.download(
+                pairs=ft_user_config.exchange.pair_whitelist,  # TODO: extract this from strategy if it is there
+                timeframes=[strategy.draft["timeframe"]],
+                date_range=date_range,
+            )
+
+            if not download_result.success:
+                logger.error(
+                    f"Failed to download market data: {download_result.error_message}"
                 )
-            except Exception as e:
-                logger.error(f"Failed to download market data: {e}")
-                raise DataDownloadTimeoutError("Failed to download market data", e)
+                await uow.backtests.edit_one(backtest_id, {"status": "failed"})
+                await uow.commit()
+                return {
+                    "state": "failure",
+                    "backtest_id": backtest_id,
+                    "strategy_id": strategy_id,
+                    "error_message": download_result.error_message,
+                }
 
             # Update status to running backtest
             await uow.backtests.edit_one(backtest_id, {"status": "running"})
@@ -93,9 +101,7 @@ async def run_backtest_task(
         except Exception as e:
             logger.error(f"Error running backtest: {e}")
             # Mark backtest as failed
-            backtest = await uow.backtests.find_one(id=backtest_id)
-            if backtest:
-                await uow.backtests.edit_one(backtest_id, {"status": "failed"})
-                await uow.commit()
+            await uow.backtests.edit_one(backtest_id, {"status": "failed"})
+            await uow.commit()
             # Re-raise the exception to be handled by AsyncTask
             raise

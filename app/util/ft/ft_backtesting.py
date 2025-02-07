@@ -1,8 +1,12 @@
 import os
 import uuid
 import logging
+
+from app.util.ft.verification.log_parser import DockerLogSummary
+from app.util.logger import setup_logger
 from .ft_base import FTBase
 from app.util.exceptions import PickleableDockerException
+from .ft_market_data import FTMarketData
 
 
 class FTBacktesting(FTBase):
@@ -15,6 +19,7 @@ class FTBacktesting(FTBase):
         """
         super().__init__(clerk_id)
         self.ensure_user_dir_exists()
+        self.logger = setup_logger(__name__)
 
     def run_backtest(self, strategy_class_name: str, date_range: str) -> str:
         """
@@ -25,7 +30,7 @@ class FTBacktesting(FTBase):
             date_range (str): Date range in freqtrade format (e.g. "20200101-20200201").
 
         Returns:
-            str: Path to the results JSON file.
+            str: Path to the results file.
 
         Raises:
             PickleableDockerException: If the backtest fails or results are not found.
@@ -37,9 +42,9 @@ class FTBacktesting(FTBase):
             raise ValueError("Date range cannot be empty")
 
         output_filename = f"backtest_{uuid.uuid4()}.json"
-        result_path = os.path.join(self.user_dir, "user_data", output_filename)
+        result_path = os.path.join(self.user_dir, "backtest_results", output_filename)
 
-        self.run_docker_command(
+        log_summary: DockerLogSummary = self.run_docker_command(
             "freqtrade",
             [
                 "backtesting",
@@ -55,6 +60,15 @@ class FTBacktesting(FTBase):
                 output_filename,
             ],
         )
+
+        if log_summary.errors:
+            for warning in log_summary.warnings:
+                self.logger.warning(f"{warning.component}: {warning.message}")
+            for error in log_summary.errors:
+                self.logger.error(f"{error.component}: {error.message}")
+            raise PickleableDockerException(
+                "Backtest failed", log_summary.errors[0].message
+            )
 
         if not os.path.exists(result_path):
             raise PickleableDockerException(
@@ -79,3 +93,15 @@ class FTBacktesting(FTBase):
         except OSError as e:
             logging.error(f"Failed to clean up result file {result_path}: {e}")
             raise
+
+
+if __name__ == "__main__":
+    ft_market_data = FTMarketData("2oFuvIYD6fvQwokCEb61laEDjoM")
+    ft_market_data.download(
+        pairs=["BTC/USDT:USDT", "ETH/USDT:USDT", "XRP/USDT:USDT"],
+        timeframes=["1h"],
+        date_range="20250128-20250205",
+        trading_mode="futures",
+    )
+    ft_backtesting = FTBacktesting("2oFuvIYD6fvQwokCEb61laEDjoM")
+    ft_backtesting.run_backtest("SampleStrategy", "20250128-20250205")

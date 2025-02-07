@@ -3,7 +3,7 @@ Pydantic schemas for data download verification.
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 

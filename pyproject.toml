@@ -46,4 +46,5 @@ dependencies = [
     "python-on-whales>=0.70.0",
     "pandas>=2.2.3",
     "pyarrow>=19.0.0",
+    "colorlog>=6.9.0",
 ]

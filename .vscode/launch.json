@@ -12,6 +12,13 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Backtest",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app.util.ft.ft_backtesting",
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Python Debugger: FastAPI",
       "type": "debugpy",
       "request": "launch",

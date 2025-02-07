@@ -33,10 +33,15 @@ class FTUserDir(FTBase):
             FileNotFoundError: If template files are missing.
         """
         if self.exists():
+            logging.info(f"User directory {self.user_dir} already exists")
             return
 
         try:
             self.initialize_from_templates()
+            self.run_docker_command(
+                "freqtrade",
+                ["create-userdir", "--userdir", "user_data"],
+            )
             self.ensure_user_dir_exists()
         except (OSError, FileNotFoundError) as e:
             logging.error(f"Failed to initialize user directory: {e}", exc_info=True)
@@ -56,3 +61,15 @@ class FTUserDir(FTBase):
         except OSError as e:
             logging.error(f"Failed to remove user directory: {e}", exc_info=True)
             raise OSError(f"Failed to remove user directory: {e}") from e
+
+
+if __name__ == "__main__":
+    import logging
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%d%b'%y %H:%M:%S",
+    )
+    ft_user_dir = FTUserDir("2oFuvIYD6fvQwokCEb61laEDjoM")
+    ft_user_dir.initialize()
