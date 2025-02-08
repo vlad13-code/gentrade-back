@@ -47,4 +47,5 @@ dependencies = [
     "pandas>=2.2.3",
     "pyarrow>=19.0.0",
     "colorlog>=6.9.0",
+    "python-json-logger>=3.2.1",
 ]

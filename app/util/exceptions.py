@@ -5,9 +5,21 @@ class DockerBacktestError(Exception):
 
 
 class PickleableDockerException(Exception):
-    def __init__(self, message, original_exception):
+    def __init__(
+        self,
+        message,
+        original_exception,
+        command,
+        stdout,
+        stderr,
+        exit_code,
+    ):
         super().__init__(message)
         self.original_exception = str(original_exception)  # Ensure it's a string
+        self.command = command
+        self.stdout = stdout
+        self.stderr = stderr
+        self.exit_code = exit_code
 
     def __str__(self):
         return f"{self.args[0]}: {self.original_exception}"

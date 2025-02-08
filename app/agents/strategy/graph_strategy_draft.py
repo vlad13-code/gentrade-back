@@ -7,17 +7,48 @@ from app.agents.strategy.tools.strategy_draft_output import strategy_draft_outpu
 from app.agents.strategy.schemas import CreateStrategyDraftState, StrategyDraft
 from app.agents.strategy.prompts.strategy_draft import strategy_draft_instructions
 from app.agents.model import model
+from app.agents.utils.logging import (
+    log_agent_step,
+    log_agent_prompt,
+    log_agent_response,
+)
 
 
 async def create_strategy_draft(state: CreateStrategyDraftState):
     """Create a strategy draft"""
+    log_agent_step(
+        "strategy_draft",
+        "start",
+        input_data={
+            "messages": [m.content for m in state["messages"]],
+            "has_feedback": bool(state.get("feedback", "")),
+        },
+    )
 
     feedback = state.get("feedback", "")
     structured_model = model.with_structured_output(StrategyDraft)
 
     system_message = strategy_draft_instructions.format(human_feedback=feedback)
+    log_agent_prompt(
+        "strategy_draft",
+        "draft_prompt",
+        strategy_draft_instructions,
+        {"human_feedback": feedback},
+    )
+
     strategy_draft = await structured_model.ainvoke(
         [SystemMessage(content=system_message)] + state["messages"]
+    )
+
+    log_agent_response(
+        "strategy_draft",
+        "draft_response",
+        str(strategy_draft),
+        {
+            "completion_tokens": getattr(strategy_draft, "completion_tokens", None),
+            "prompt_tokens": getattr(strategy_draft, "prompt_tokens", None),
+            "total_tokens": getattr(strategy_draft, "total_tokens", None),
+        },
     )
 
     # Force call for outputting strategy to frontend.
@@ -34,6 +65,17 @@ async def create_strategy_draft(state: CreateStrategyDraftState):
         ],
     )
 
+    log_agent_step(
+        "strategy_draft",
+        "complete",
+        output_data={
+            "strategy_name": strategy_draft.name,
+            "indicator_count": len(strategy_draft.indicators),
+            "entry_signal_count": len(strategy_draft.entry_signals),
+            "exit_signal_count": len(strategy_draft.exit_signals),
+        },
+    )
+
     return {
         "strategy_draft": strategy_draft,
         "messages": [tool_call_ai_message],
@@ -42,13 +84,27 @@ async def create_strategy_draft(state: CreateStrategyDraftState):
 
 def human_feedback(state: CreateStrategyDraftState):
     """No-op node that should be interrupted on"""
+    log_agent_step(
+        "strategy_draft",
+        "awaiting_feedback",
+        input_data={"strategy_name": state["strategy_draft"].name},
+    )
     pass
 
 
 def should_continue(state: CreateStrategyDraftState):
     """Return the next node to execute"""
-
     feedback = state.get("feedback", None)
+
+    log_agent_step(
+        "strategy_draft",
+        "check_feedback",
+        input_data={
+            "has_feedback": bool(feedback),
+            "strategy_name": state["strategy_draft"].name,
+        },
+    )
+
     if feedback:
         return "create_strategy_draft"
 

@@ -22,8 +22,13 @@ from app.config import settings
 from app.dependencies import check_auth
 from app.routers.v1.routers import all_routers
 from app.db.models import *  # noqa: F403
+from app.middleware.logging import LoggingMiddleware
+from app.util.logger import setup_logger
 
 load_dotenv()
+
+# Setup main application logger
+logger = setup_logger("main")
 
 
 class ChatInputType(BaseModel):
@@ -32,6 +37,7 @@ class ChatInputType(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    logger.info("Starting application")
     connection_kwargs = {
         "autocommit": True,
         "prepare_threshold": 0,
@@ -49,7 +55,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             checkpointer = AsyncPostgresSaver(pool)
             graph_main.checkpointer = checkpointer
             app.state.agent = graph_main
-            yield  # Yield control back to the application
+            logger.info("Application startup complete")
+            yield
+            logger.info("Shutting down application")
 
 
 app = FastAPI(
@@ -61,6 +69,10 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(
+        "Request validation error",
+        extra={"data": {"errors": exc.errors(), "body": exc.body}},
+    )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
@@ -69,20 +81,28 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
-    print(exc)
+    logger.error(
+        f"Unhandled exception: {str(exc)}",
+        extra={"data": {"error_type": type(exc).__name__, "error_details": str(exc)}},
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=jsonable_encoder({"detail": str(exc)}),
     )
 
 
-# TODO: Add checking for a human feedback here and update the state if needed. Decide doing it here or in the deps
 async def check_thread_id(config: dict, request: Request):
     if "threadid" in request.headers:
         config["configurable"]["thread_id"] = request.headers["threadid"]
+        logger.debug(
+            "Thread ID set from headers",
+            extra={"data": {"thread_id": request.headers["threadid"]}},
+        )
     return config
 
 
+# Add middleware
+app.add_middleware(LoggingMiddleware)  # Add this before CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -118,3 +138,5 @@ app.openapi_tags.append(
         "description": "Chat history endpoints. Designed for using on frontend.",
     }
 )
+
+logger.info("Application routes configured")

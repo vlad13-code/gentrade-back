@@ -8,14 +8,39 @@ from app.agents.main.schemas import RouterResponse, AgentState, get_agent_descri
 from app.agents.strategy.graph_strategy_draft import strategy_builder
 from app.agents.main.prompts.base import router_instructions
 from app.agents.model import model
+from app.agents.utils.logging import (
+    log_agent_step,
+    log_agent_prompt,
+    log_agent_response,
+)
 
 
 async def main_router(state: AgentState) -> RouterResponse:
+    log_agent_step(
+        "main_router",
+        "start",
+        input_data={
+            "messages": [m.content for m in state["messages"]],
+            "is_last_step": state.get("is_last_step", False),
+        },
+    )
+
     structured_model = model.with_structured_output(RouterResponse)
 
     system_message = router_instructions.format(agents=get_agent_descriptions())
+    log_agent_prompt(
+        "main_router",
+        "router_prompt",
+        router_instructions,
+        {"agents": get_agent_descriptions()},
+    )
+
     router_response = await structured_model.ainvoke(
         [SystemMessage(content=system_message)] + state["messages"]
+    )
+
+    log_agent_step(
+        "main_router", "complete", output_data={"selected_agent": router_response.agent}
     )
 
     return {"agent": router_response.agent}
@@ -24,9 +49,32 @@ async def main_router(state: AgentState) -> RouterResponse:
 async def acall_model(
     state: AgentState, config: RunnableConfig, *, store: BaseStore
 ) -> AgentState:
+    log_agent_step(
+        "model",
+        "start",
+        input_data={
+            "messages": [m.content for m in state["messages"]],
+            "is_last_step": state.get("is_last_step", False),
+        },
+    )
+
     response = await model.ainvoke(state["messages"], config)
 
+    log_agent_response(
+        "model",
+        "model_response",
+        response.content,
+        {
+            "completion_tokens": getattr(response, "completion_tokens", None),
+            "prompt_tokens": getattr(response, "prompt_tokens", None),
+            "total_tokens": getattr(response, "total_tokens", None),
+        },
+    )
+
     if state["is_last_step"] and response.tool_calls:
+        log_agent_step(
+            "model", "error", error=Exception("Need more steps to process this request")
+        )
         return {
             "messages": [
                 AIMessage(
@@ -35,6 +83,15 @@ async def acall_model(
                 )
             ]
         }
+
+    log_agent_step(
+        "model",
+        "complete",
+        output_data={
+            "response_id": response.id,
+            "has_tool_calls": bool(response.tool_calls),
+        },
+    )
     return {"messages": [response]}
 
 
@@ -56,10 +113,7 @@ graph_main = agent.compile(checkpointer=MemorySaver())
 
 if __name__ == "__main__":
     import asyncio
-
     from dotenv import load_dotenv
-
-    # from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
     load_dotenv()
 

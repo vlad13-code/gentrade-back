@@ -1,5 +1,5 @@
 import os
-import logging
+from app.util.logger import setup_logger
 from .ft_base import FTBase
 
 
@@ -13,6 +13,7 @@ class FTStrategies(FTBase):
         """
         super().__init__(user_id)
         self.ensure_user_dir_exists()
+        self.logger = setup_logger(__name__)
 
     def write_strategy(self, strategy_code: str, strategy_name: str) -> str:
         """
@@ -30,19 +31,60 @@ class FTStrategies(FTBase):
             OSError: If the file cannot be written.
         """
         if not strategy_code:
+            self.logger.error(
+                "Strategy code cannot be empty",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_name": strategy_name,
+                    "error_type": "ValueError",
+                },
+            )
             raise ValueError("Strategy code cannot be empty.")
         if not strategy_name:
+            self.logger.error(
+                "Strategy name cannot be empty",
+                extra={"user_id": self.user_id, "error_type": "ValueError"},
+            )
             raise ValueError("Strategy name cannot be empty.")
 
         camel_case_name = self.to_camel_case(strategy_name)
         strategy_file_path = os.path.join(self.strategies_dir, f"{camel_case_name}.py")
 
+        self.logger.debug(
+            "Writing strategy file",
+            extra={
+                "user_id": self.user_id,
+                "strategy_name": strategy_name,
+                "strategy_file": f"{camel_case_name}.py",
+                "file_path": strategy_file_path,
+            },
+        )
+
         try:
             with open(strategy_file_path, "w") as strategy_file:
                 strategy_file.write(strategy_code)
+
+            self.logger.info(
+                "Successfully wrote strategy file",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_name": strategy_name,
+                    "strategy_file": f"{camel_case_name}.py",
+                    "file_path": strategy_file_path,
+                },
+            )
         except OSError as e:
-            logging.error(
-                f"Failed to write strategy file: {strategy_file_path}", exc_info=True
+            self.logger.error(
+                "Failed to write strategy file",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_name": strategy_name,
+                    "strategy_file": f"{camel_case_name}.py",
+                    "file_path": strategy_file_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
             )
             raise OSError(f"Failed to write strategy file: {e}") from e
 
@@ -61,20 +103,58 @@ class FTStrategies(FTBase):
             OSError: If the file cannot be deleted.
         """
         if not strategy_file:
+            self.logger.error(
+                "Strategy file cannot be empty",
+                extra={"user_id": self.user_id, "error_type": "ValueError"},
+            )
             raise ValueError("Strategy file cannot be empty.")
 
         strategy_file_path = os.path.join(self.strategies_dir, strategy_file)
 
+        self.logger.debug(
+            "Attempting to delete strategy file",
+            extra={
+                "user_id": self.user_id,
+                "strategy_file": strategy_file,
+                "file_path": strategy_file_path,
+            },
+        )
+
         if not os.path.exists(strategy_file_path):
+            self.logger.error(
+                "Strategy file does not exist",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_file": strategy_file,
+                    "file_path": strategy_file_path,
+                    "error_type": "FileNotFoundError",
+                },
+            )
             raise FileNotFoundError(
                 f"Strategy file does not exist: {strategy_file_path}"
             )
 
         try:
             os.remove(strategy_file_path)
+            self.logger.info(
+                "Successfully deleted strategy file",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_file": strategy_file,
+                    "file_path": strategy_file_path,
+                },
+            )
         except OSError as e:
-            logging.error(
-                f"Failed to delete strategy file: {strategy_file_path}", exc_info=True
+            self.logger.error(
+                "Failed to delete strategy file",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_file": strategy_file,
+                    "file_path": strategy_file_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
             )
             raise OSError(f"Failed to delete strategy file: {e}") from e
 
@@ -88,12 +168,46 @@ class FTStrategies(FTBase):
         Raises:
             OSError: If the directory cannot be read.
         """
+        self.logger.debug(
+            "Listing strategy files",
+            extra={"user_id": self.user_id, "strategies_dir": self.strategies_dir},
+        )
+
         try:
             if not os.path.exists(self.strategies_dir):
+                self.logger.info(
+                    "Strategies directory does not exist",
+                    extra={
+                        "user_id": self.user_id,
+                        "strategies_dir": self.strategies_dir,
+                    },
+                )
                 return []
-            return [f for f in os.listdir(self.strategies_dir) if f.endswith(".py")]
+
+            strategies = [
+                f for f in os.listdir(self.strategies_dir) if f.endswith(".py")
+            ]
+            self.logger.debug(
+                "Successfully listed strategy files",
+                extra={
+                    "user_id": self.user_id,
+                    "strategies_dir": self.strategies_dir,
+                    "strategy_count": len(strategies),
+                    "strategies": strategies,
+                },
+            )
+            return strategies
         except OSError as e:
-            logging.error(f"Failed to list strategies: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to list strategies",
+                extra={
+                    "user_id": self.user_id,
+                    "strategies_dir": self.strategies_dir,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             raise OSError(f"Failed to list strategies: {e}") from e
 
     def read_strategy(self, strategy_file: str) -> str:
@@ -112,20 +226,60 @@ class FTStrategies(FTBase):
             OSError: If the file cannot be read.
         """
         if not strategy_file:
+            self.logger.error(
+                "Strategy file cannot be empty",
+                extra={"user_id": self.user_id, "error_type": "ValueError"},
+            )
             raise ValueError("Strategy file cannot be empty.")
 
         strategy_file_path = os.path.join(self.strategies_dir, strategy_file)
 
+        self.logger.debug(
+            "Reading strategy file",
+            extra={
+                "user_id": self.user_id,
+                "strategy_file": strategy_file,
+                "file_path": strategy_file_path,
+            },
+        )
+
         if not os.path.exists(strategy_file_path):
+            self.logger.error(
+                "Strategy file does not exist",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_file": strategy_file,
+                    "file_path": strategy_file_path,
+                    "error_type": "FileNotFoundError",
+                },
+            )
             raise FileNotFoundError(
                 f"Strategy file does not exist: {strategy_file_path}"
             )
 
         try:
             with open(strategy_file_path, "r") as f:
-                return f.read()
+                content = f.read()
+            self.logger.debug(
+                "Successfully read strategy file",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_file": strategy_file,
+                    "file_path": strategy_file_path,
+                    "content_length": len(content),
+                },
+            )
+            return content
         except OSError as e:
-            logging.error(
-                f"Failed to read strategy file: {strategy_file_path}", exc_info=True
+            self.logger.error(
+                "Failed to read strategy file",
+                extra={
+                    "user_id": self.user_id,
+                    "strategy_file": strategy_file,
+                    "file_path": strategy_file_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
             )
             raise OSError(f"Failed to read strategy file: {e}") from e

@@ -1,11 +1,11 @@
 import os
 import json
-import logging
 from typing import Union, Dict, Any
 from pydantic import ValidationError
 
 from .ft_base import FTBase
 from app.schemas.schema_freqtrade_config import FreqtradeConfig
+from app.util.logger import setup_logger
 
 
 class FTUserConfig(FTBase):
@@ -19,6 +19,7 @@ class FTUserConfig(FTBase):
         super().__init__(user_id)
         self.config_path = os.path.join(self.user_dir, "user_data", "config.json")
         self.ensure_user_dir_exists()
+        self.logger = setup_logger(__name__)
 
     def read_config(self) -> FreqtradeConfig:
         """
@@ -33,21 +34,62 @@ class FTUserConfig(FTBase):
             OSError: If file cannot be read
             json.JSONDecodeError: If config file is not valid JSON
         """
+        self.logger.debug(
+            "Reading configuration file",
+            extra={"user_id": self.user_id, "config_path": self.config_path},
+        )
+
         if not os.path.exists(self.config_path):
+            self.logger.error(
+                "Configuration file not found",
+                extra={"user_id": self.user_id, "config_path": self.config_path},
+            )
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
         try:
             with open(self.config_path, "r") as config_file:
                 config_data = json.load(config_file)
-            return FreqtradeConfig(**config_data)
+            config = FreqtradeConfig(**config_data)
+            self.logger.debug(
+                "Successfully read configuration file",
+                extra={"user_id": self.user_id, "config_path": self.config_path},
+            )
+            return config
         except json.JSONDecodeError as e:
-            logging.error(f"Failed to parse config file: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to parse config file",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": "JSONDecodeError",
+                },
+                exc_info=True,
+            )
             raise
         except ValidationError as e:
-            logging.error(f"Invalid configuration: {e}", exc_info=True)
+            self.logger.error(
+                "Invalid configuration",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": "ValidationError",
+                },
+                exc_info=True,
+            )
             raise
         except OSError as e:
-            logging.error(f"Failed to read config file: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to read config file",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             raise
 
     def write_config(self, config: Union[FreqtradeConfig, Dict[str, Any]]) -> None:
@@ -62,11 +104,26 @@ class FTUserConfig(FTBase):
             OSError: If file cannot be written
             TypeError: If config is of invalid type
         """
+        self.logger.debug(
+            "Writing configuration file",
+            extra={"user_id": self.user_id, "config_path": self.config_path},
+        )
+
         try:
             if isinstance(config, dict):
                 config = FreqtradeConfig(**config)
             elif not isinstance(config, FreqtradeConfig):
-                raise TypeError("Config must be either FreqtradeConfig or dict")
+                error_msg = "Config must be either FreqtradeConfig or dict"
+                self.logger.error(
+                    error_msg,
+                    extra={
+                        "user_id": self.user_id,
+                        "config_path": self.config_path,
+                        "error_type": "TypeError",
+                        "config_type": type(config).__name__,
+                    },
+                )
+                raise TypeError(error_msg)
 
             # Create parent directory if it doesn't exist
             os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
@@ -79,11 +136,34 @@ class FTUserConfig(FTBase):
             # Rename temporary file to actual config file (atomic operation)
             os.replace(temp_path, self.config_path)
 
+            self.logger.info(
+                "Successfully wrote configuration file",
+                extra={"user_id": self.user_id, "config_path": self.config_path},
+            )
+
         except ValidationError as e:
-            logging.error(f"Invalid configuration: {e}", exc_info=True)
+            self.logger.error(
+                "Invalid configuration",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": "ValidationError",
+                },
+                exc_info=True,
+            )
             raise
         except OSError as e:
-            logging.error(f"Failed to write config file: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to write config file",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             if os.path.exists(f"{self.config_path}.tmp"):
                 try:
                     os.remove(f"{self.config_path}.tmp")
@@ -91,7 +171,16 @@ class FTUserConfig(FTBase):
                     pass
             raise
         except Exception as e:
-            logging.error(f"Unexpected error writing config: {e}", exc_info=True)
+            self.logger.error(
+                "Unexpected error writing config",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             raise
 
     def update_config(self, updates: Dict[str, Any]) -> FreqtradeConfig:
@@ -109,6 +198,15 @@ class FTUserConfig(FTBase):
             ValidationError: If updates are invalid
             OSError: If file operations fail
         """
+        self.logger.debug(
+            "Updating configuration",
+            extra={
+                "user_id": self.user_id,
+                "config_path": self.config_path,
+                "update_keys": list(updates.keys()),
+            },
+        )
+
         try:
             current_config = self.read_config()
             current_dict = current_config.model_dump()
@@ -120,10 +218,29 @@ class FTUserConfig(FTBase):
             updated_config = FreqtradeConfig(**current_dict)
             self.write_config(updated_config)
 
+            self.logger.info(
+                "Successfully updated configuration",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "updated_keys": list(updates.keys()),
+                },
+            )
+
             return updated_config
 
         except Exception as e:
-            logging.error(f"Failed to update configuration: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to update configuration",
+                extra={
+                    "user_id": self.user_id,
+                    "config_path": self.config_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "update_keys": list(updates.keys()),
+                },
+                exc_info=True,
+            )
             raise
 
     def _deep_update(

@@ -1,12 +1,10 @@
 import os
-import logging
-import pprint
 from typing import Optional
 from python_on_whales import DockerClient, DockerException
 from app.config import settings
 from app.util.exceptions import PickleableDockerException
 from .verification.log_parser import DockerLogParser, DockerLogSummary
-from ..logger import setup_logger
+from app.util.logger import setup_logger
 
 
 class FTBase:
@@ -28,7 +26,7 @@ class FTBase:
         self.strategies_dir = self._get_strategies_dir()
         self.docker_compose_path = os.path.join(self.user_dir, "docker-compose.yml")
         self._docker_compose_client: Optional[DockerClient] = None
-        self.logger = setup_logger(__name__)
+        self.logger = setup_logger("ft.base")
         self.log_parser = DockerLogParser()
 
     @property
@@ -40,6 +38,10 @@ class FTBase:
             DockerClient: Configured Docker Compose client for the user.
         """
         if self._docker_compose_client is None:
+            self.logger.debug(
+                f"Initializing Docker client with compose file: {self.docker_compose_path}",
+                extra={"data": {"compose_file": self.docker_compose_path}},
+            )
             self._docker_compose_client = DockerClient(
                 compose_files=[self.docker_compose_path]
             )
@@ -87,6 +89,10 @@ class FTBase:
         """
         template_path = os.path.join(settings.FT_USERDATA_DIR, template_name)
         if not os.path.exists(template_path):
+            self.logger.error(
+                "Template file not found",
+                extra={"data": {"template_path": template_path}},
+            )
             raise FileNotFoundError(f"Template file not found: {template_path}")
 
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
@@ -100,7 +106,17 @@ class FTBase:
 
         with open(target_path, "w") as target_file:
             target_file.write(content)
-        logging.info(f"Created {target_path} from {template_path}")
+
+        self.logger.info(
+            "Created file from template",
+            extra={
+                "data": {
+                    "template": template_name,
+                    "target_path": target_path,
+                    "replacements": replacements,
+                }
+            },
+        )
 
     def initialize_from_templates(self) -> None:
         """
@@ -110,6 +126,10 @@ class FTBase:
             FileNotFoundError: If template files are missing.
             OSError: If file creation fails.
         """
+        self.logger.info(
+            "Initializing user directory from templates",
+            extra={"data": {"user_id": self.user_id}},
+        )
         try:
             # Create docker-compose.yml
             self._create_from_template(
@@ -122,8 +142,16 @@ class FTBase:
             config_path = os.path.join(self.user_dir, "user_data", "config.json")
             self._create_from_template("config.json.template", config_path)
 
+            self.logger.info(
+                "User directory initialized successfully",
+                extra={"data": {"user_id": self.user_id, "user_dir": self.user_dir}},
+            )
+
         except (OSError, FileNotFoundError) as e:
-            logging.error(f"Failed to initialize from templates: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to initialize from templates",
+                extra={"data": {"error": str(e), "error_type": type(e).__name__}},
+            )
             raise
 
     def ensure_user_dir_exists(self) -> None:
@@ -133,8 +161,22 @@ class FTBase:
         Raises:
             OSError: If directory creation fails.
         """
-        os.makedirs(self.user_dir, exist_ok=True)
-        os.makedirs(self.strategies_dir, exist_ok=True)
+        try:
+            os.makedirs(self.user_dir, exist_ok=True)
+            os.makedirs(self.strategies_dir, exist_ok=True)
+        except OSError as e:
+            self.logger.error(
+                "Failed to create user directories",
+                extra={
+                    "data": {
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "user_dir": self.user_dir,
+                        "strategies_dir": self.strategies_dir,
+                    }
+                },
+            )
+            raise
 
     def run_docker_command(
         self, service: str, command: list[str], remove: bool = True
@@ -149,11 +191,24 @@ class FTBase:
 
         Raises:
             PickleableDockerException: If the Docker command fails.
+
+        Returns:
+            DockerLogSummary: The log summary of the Docker command.
         """
-        logging.info(f"Running Docker command: {service} {' '.join(command)}")
+        self.logger.info(
+            f"Running Docker command: {' '.join(command)}",
+            extra={
+                "data": {
+                    "service": service,
+                    "command": command,
+                    "remove_container": remove,
+                }
+            },
+        )
+
+        result = {"stdout": [], "stderr": []}
 
         try:
-            result = {"stdout": [], "stderr": []}
             output_stream = self.docker.compose.run(
                 service,
                 command,
@@ -162,30 +217,34 @@ class FTBase:
                 remove=remove,
             )
 
-            for type, line in output_stream:
-                result[type].append(line.decode())
+            for stream_type, line in output_stream:
+                result[stream_type].append(line.decode())
 
-            # Parse logs for warnings and errors
-            log_summary = self.log_parser.process_docker_output(result)
+            return self.log_parser.process_docker_output(result)
 
-            # Log warnings
-            if log_summary.warnings:
-                for warning in log_summary.warnings:
-                    self.logger.warning(
-                        f"{warning.component}: {warning.message}",
-                        extra={"timestamp": warning.timestamp},
-                    )
-
-            return log_summary
         except DockerException as e:
-            if "TimeoutError" in str(e) or "RequestTimeout" in str(e):
-                self.logger.error(
-                    "Connection timeout detected. Please check your network connection and try again."
-                )
-            logs = {"stderr": e.stderr, "stdout": e.stdout}
-            log_summary = self.log_parser.process_docker_output(logs)
-
-            return log_summary
+            log_summary: DockerLogSummary = self.log_parser.process_docker_output(
+                {"stdout": "", "stderr": str(e)}
+            )
+            self.logger.error(
+                f"Docker command failed: {log_summary.errors[0].message}",
+                extra={
+                    "data": {
+                        "service": service,
+                        "command": " ".join(command),
+                        "error": str(e),
+                        "error_type": e.__class__.__name__,
+                    }
+                },
+            )
+            raise PickleableDockerException(
+                message=str(e),
+                original_exception=e,
+                command=command,
+                exit_code=getattr(e, "return_code", -1),
+                stdout=getattr(e, "stdout", ""),
+                stderr=getattr(e, "stderr", str(e)),
+            ) from e
 
     @staticmethod
     def to_camel_case(strategy_name: str) -> str:

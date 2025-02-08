@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import pandas as pd
 
 from app.util.ft.verification.log_parser import DockerLogSummary
-from ...logger import setup_logger
+from app.util.logger import setup_logger
 
 from .exceptions import (
     DataIntegrityError,
@@ -271,15 +271,12 @@ class DataDownloadVerifier:
         try:
             # Step 1: Verify Docker execution
             if docker_result:
-                self.logger.debug("Step 1: Docker execution verification")
                 self.verify_docker_execution(docker_result)
 
             # Step 2: Verify files existence
-            self.logger.debug("Step 2: File existence verification")
             verified_files = self.verify_files_existence(expected_files)
 
             # Step 3: Verify data integrity and date ranges
-            self.logger.debug("Step 3: Data integrity verification")
             warnings = []
             date_range_info = {}
 
