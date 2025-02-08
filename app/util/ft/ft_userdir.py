@@ -1,6 +1,6 @@
 import os
 import shutil
-import logging
+from app.util.logger import setup_logger
 from .ft_base import FTBase
 
 
@@ -13,6 +13,7 @@ class FTUserDir(FTBase):
             user_id (str): The user's ID.
         """
         super().__init__(user_id)
+        self.logger = setup_logger(__name__)
 
     def exists(self) -> bool:
         """
@@ -21,7 +22,16 @@ class FTUserDir(FTBase):
         Returns:
             bool: True if the directory exists, False otherwise.
         """
-        return os.path.exists(self.user_dir)
+        exists = os.path.exists(self.user_dir)
+        self.logger.debug(
+            "Checked user directory existence",
+            extra={
+                "user_id": self.user_id,
+                "directory": self.user_dir,
+                "exists": exists,
+            },
+        )
+        return exists
 
     def initialize(self) -> None:
         """
@@ -33,18 +43,38 @@ class FTUserDir(FTBase):
             FileNotFoundError: If template files are missing.
         """
         if self.exists():
-            logging.info(f"User directory {self.user_dir} already exists")
+            self.logger.info(
+                "User directory already exists",
+                extra={"user_id": self.user_id, "directory": self.user_dir},
+            )
             return
 
         try:
+            self.logger.info(
+                "Initializing user directory",
+                extra={"user_id": self.user_id, "directory": self.user_dir},
+            )
             self.initialize_from_templates()
             self.run_docker_command(
                 "freqtrade",
                 ["create-userdir", "--userdir", "user_data"],
             )
             self.ensure_user_dir_exists()
+            self.logger.info(
+                "Successfully initialized user directory",
+                extra={"user_id": self.user_id, "directory": self.user_dir},
+            )
         except (OSError, FileNotFoundError) as e:
-            logging.error(f"Failed to initialize user directory: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to initialize user directory",
+                extra={
+                    "user_id": self.user_id,
+                    "directory": self.user_dir,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             self.remove()  # Clean up partially created directory
             raise OSError(f"Failed to initialize user directory: {e}") from e
 
@@ -57,9 +87,26 @@ class FTUserDir(FTBase):
         """
         try:
             if self.exists():
+                self.logger.info(
+                    "Removing user directory",
+                    extra={"user_id": self.user_id, "directory": self.user_dir},
+                )
                 shutil.rmtree(self.user_dir)
+                self.logger.info(
+                    "Successfully removed user directory",
+                    extra={"user_id": self.user_id, "directory": self.user_dir},
+                )
         except OSError as e:
-            logging.error(f"Failed to remove user directory: {e}", exc_info=True)
+            self.logger.error(
+                "Failed to remove user directory",
+                extra={
+                    "user_id": self.user_id,
+                    "directory": self.user_dir,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             raise OSError(f"Failed to remove user directory: {e}") from e
 
 

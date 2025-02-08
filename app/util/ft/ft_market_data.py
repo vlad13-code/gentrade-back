@@ -3,7 +3,7 @@ from typing import List
 
 from app.util.logger import setup_logger
 from .ft_base import FTBase
-from .verification.verifier import DataDownloadVerifier
+from .verification.data_download_verifier import DataDownloadVerifier
 from .verification.schemas import VerificationResult
 
 
@@ -34,7 +34,6 @@ class FTMarketData(FTBase):
         Returns:
             List[str]: List of expected file paths
         """
-
         expected_files = []
         for pair in pairs:
             # Replace / with _ and handle :USDT suffix
@@ -83,6 +82,7 @@ class FTMarketData(FTBase):
         self.logger.debug(
             "Starting market data download",
             extra={
+                "user_id": self.user_id,
                 "pairs": pairs,
                 "timeframes": timeframes,
                 "date_range": date_range,
@@ -93,13 +93,22 @@ class FTMarketData(FTBase):
 
         # Input validation
         if not pairs:
-            self.logger.error("Pairs list cannot be empty")
+            self.logger.error(
+                "Pairs list cannot be empty",
+                extra={"user_id": self.user_id, "error_type": "ValueError"},
+            )
             raise ValueError("Pairs list cannot be empty")
         if not timeframes:
-            self.logger.error("Timeframes list cannot be empty")
+            self.logger.error(
+                "Timeframes list cannot be empty",
+                extra={"user_id": self.user_id, "error_type": "ValueError"},
+            )
             raise ValueError("Timeframes list cannot be empty")
         if not date_range:
-            self.logger.error("Date range cannot be empty")
+            self.logger.error(
+                "Date range cannot be empty",
+                extra={"user_id": self.user_id, "error_type": "ValueError"},
+            )
             raise ValueError("Date range cannot be empty")
 
         # Generate expected file paths
@@ -112,7 +121,14 @@ class FTMarketData(FTBase):
             timeframes=timeframes,
         )
         if verification_result.success:
-            self.logger.info("Market data already downloaded, skipping download")
+            self.logger.info(
+                "Market data already downloaded, skipping download",
+                extra={
+                    "user_id": self.user_id,
+                    "verified_files": verification_result.verified_files,
+                    "verification_time": verification_result.verification_time,
+                },
+            )
             return verification_result
 
         try:
@@ -132,9 +148,18 @@ class FTMarketData(FTBase):
                 trading_mode,
             ]
 
+            self.logger.debug(
+                "Executing Docker command for data download",
+                extra={"user_id": self.user_id, "docker_command": docker_command},
+            )
+
             # Execute Docker command
-            # docker_output = {"stdout": [], "stderr": []}
             log_summary = self.run_docker_command("freqtrade", docker_command)
+
+            self.logger.debug(
+                "Docker command completed",
+                extra={"user_id": self.user_id, "log_summary": log_summary},
+            )
 
             # Verify the download
             verification_result = self.verifier.verify_download(
@@ -146,16 +171,20 @@ class FTMarketData(FTBase):
 
             if not verification_result.success:
                 self.logger.error(
-                    f"Data download verification failed: {verification_result.error_type} {verification_result.error_message}",
+                    "Data download verification failed",
                     extra={
+                        "user_id": self.user_id,
                         "error_type": verification_result.error_type,
                         "error_message": verification_result.error_message,
+                        "verified_files": verification_result.verified_files,
+                        "verification_time": verification_result.verification_time,
                     },
                 )
             else:
                 self.logger.info(
                     "Data download verification succeeded",
                     extra={
+                        "user_id": self.user_id,
                         "verified_files": verification_result.verified_files,
                         "verification_time": verification_result.verification_time,
                     },
@@ -165,8 +194,17 @@ class FTMarketData(FTBase):
 
         except Exception as e:
             self.logger.error(
-                f"Failed to download market data: {str(e)}",
-                extra={"error": str(e), "error_type": type(e).__name__},
+                "Failed to download market data",
+                extra={
+                    "user_id": self.user_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "pairs": pairs,
+                    "timeframes": timeframes,
+                    "date_range": date_range,
+                    "exchange": exchange,
+                    "trading_mode": trading_mode,
+                },
                 exc_info=True,
             )
             raise
