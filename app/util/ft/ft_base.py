@@ -1,10 +1,12 @@
 import os
+import uuid
 from typing import Optional
 from python_on_whales import DockerClient, DockerException
 from app.config import settings
 from app.util.exceptions import PickleableDockerException
-from .verification.log_parser import DockerLogParser, DockerLogSummary
+from .verification.log_parser import JsonlLogParser, LogSummary
 from app.util.logger import setup_logger
+from pathlib import Path
 
 
 class FTBase:
@@ -22,12 +24,16 @@ class FTBase:
             raise ValueError("User ID cannot be empty.")
 
         self.user_id = user_id
+
         self.user_dir = self._get_user_data_directory()
         self.strategies_dir = self._get_strategies_dir()
+        self.logs_dir = self._get_logs_dir()
+
         self.docker_compose_path = os.path.join(self.user_dir, "docker-compose.yml")
+
         self._docker_compose_client: Optional[DockerClient] = None
         self.logger = setup_logger("ft.base")
-        self.log_parser = DockerLogParser()
+        self.log_parser = JsonlLogParser()
 
     @property
     def docker(self) -> DockerClient:
@@ -71,6 +77,15 @@ class FTBase:
             str: The full path to the user's strategies directory.
         """
         return os.path.join(self.user_dir, "user_data", "strategies")
+
+    def _get_logs_dir(self) -> str:
+        """
+        Constructs the full path to the user's logs directory.
+
+        Returns:
+            str: The full path to the user's logs directory.
+        """
+        return os.path.join(self.user_dir, "user_data", "logs")
 
     def _create_from_template(
         self, template_name: str, target_path: str, replacements: dict = None
@@ -180,7 +195,7 @@ class FTBase:
 
     def run_docker_command(
         self, service: str, command: list[str], remove: bool = True
-    ) -> DockerLogSummary:
+    ) -> LogSummary:
         """
         Run a Docker command safely with proper error handling.
 
@@ -195,45 +210,60 @@ class FTBase:
         Returns:
             DockerLogSummary: The log summary of the Docker command.
         """
+
+        # Create a unique log file for each run
+        log_file = f"ft_logs_{uuid.uuid4()}.log"
+        jsonl_file = Path(self.logs_dir) / f"{log_file}.jsonl"
+
+        # Add the logfile argument to the command
+        command.append("--logfile")
+        command.append(log_file)
+
         self.logger.info(
             f"Running Docker command: {' '.join(command)}",
             extra={
                 "data": {
                     "service": service,
                     "command": command,
-                    "remove_container": remove,
                 }
             },
         )
 
-        result = {"stdout": [], "stderr": []}
-
         try:
-            output_stream = self.docker.compose.run(
+            self.docker.compose.run(
                 service,
                 command,
                 tty=False,
-                stream=True,
                 remove=remove,
             )
 
-            for stream_type, line in output_stream:
-                result[stream_type].append(line.decode())
+            log_summary: LogSummary = self.log_parser.process_log_file(
+                jsonl_file.absolute()
+            )
+            os.remove(jsonl_file.absolute())
 
-            return self.log_parser.process_docker_output(result)
+            return log_summary
 
         except DockerException as e:
-            log_summary: DockerLogSummary = self.log_parser.process_docker_output(
-                {"stdout": "", "stderr": str(e)}
+            log_summary: LogSummary = self.log_parser.process_log_file(
+                jsonl_file.absolute()
             )
+            os.remove(jsonl_file.absolute())
+
             self.logger.error(
                 f"Docker command failed: {log_summary.errors[0].message}",
                 extra={
                     "data": {
                         "service": service,
                         "command": " ".join(command),
-                        "error": str(e),
-                        "error_type": e.__class__.__name__,
+                        "errors": [
+                            f"{error.name}: {error.message}"
+                            for error in log_summary.errors
+                        ],
+                        "warnings": [
+                            f"{warning.name}: {warning.message}"
+                            for warning in log_summary.warnings
+                        ],
                     }
                 },
             )

@@ -158,7 +158,10 @@ class FTMarketData(FTBase):
 
             self.logger.debug(
                 "Docker command completed",
-                extra={"user_id": self.user_id, "log_summary": log_summary},
+                extra={
+                    "errors": log_summary.errors,
+                    "warnings": log_summary.warnings,
+                },
             )
 
             # Verify the download

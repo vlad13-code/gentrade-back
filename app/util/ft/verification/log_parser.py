@@ -1,211 +1,182 @@
 from datetime import datetime
-import re
-from typing import List, Dict, Optional
+import json
+from typing import List, Dict, Optional, Generator
 from pydantic import BaseModel, Field
 
 from ...logger import setup_logger
 
 
 class LogEntry(BaseModel):
-    """Represents a single log entry."""
+    """Represents a single log entry from Freqtrade JSONL logs."""
 
     timestamp: datetime = Field(description="Timestamp of the log entry")
-    level: str = Field(description="Log level (WARNING, ERROR, etc.)")
-    component: str = Field(description="Component that generated the log")
+    created: float = Field(description="Unix timestamp when the log was created")
+    name: str = Field(description="Logger name/component")
+    levelname: str = Field(description="Log level (INFO, WARNING, ERROR, etc.)")
     message: str = Field(description="Log message content")
+    module: str = Field(description="Python module that generated the log")
+    lineno: int = Field(description="Line number in the source code")
     details: Optional[Dict] = Field(None, description="Additional log details")
 
 
-class DockerLogSummary(BaseModel):
-    """Summary of Docker log analysis."""
+class LogSummary(BaseModel):
+    """Summary of log analysis."""
 
+    info: List[LogEntry] = Field(
+        default_factory=list, description="List of info log entries"
+    )
     warnings: List[LogEntry] = Field(
         default_factory=list, description="List of warning log entries"
     )
     errors: List[LogEntry] = Field(
         default_factory=list, description="List of error log entries"
     )
+    total_info: int = Field(
+        default=0, description="Total number of info messages found"
+    )
     total_warnings: int = Field(default=0, description="Total number of warnings found")
     total_errors: int = Field(default=0, description="Total number of errors found")
-
-
-class DockerLogParser:
-    """Parser for Docker log output with focus on WARNING and ERROR messages."""
-
-    # Regex to match timestamp at the start of a log line
-    TIMESTAMP_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}")
-
-    # Regex to match a complete log line
-    LOG_LINE_PATTERN = re.compile(
-        r"(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\s*-\s*(?P<component>[^-]+)-\s*(?P<level>[^-]+)-\s*(?P<message>.*)"
+    start_time: Optional[datetime] = Field(
+        None, description="Timestamp of first log entry"
     )
+    end_time: Optional[datetime] = Field(
+        None, description="Timestamp of last log entry"
+    )
+
+
+class JsonlLogParser:
+    """Parser for Freqtrade JSONL log files."""
 
     def __init__(self):
         """Initialize the parser."""
-        self.summary = DockerLogSummary()
+        self.summary = LogSummary()
         self.logger = setup_logger(__name__)
 
     def parse_log_line(self, line: str) -> Optional[LogEntry]:
         """
-        Parse a single log line into a LogEntry object.
+        Parse a single JSONL log line into a LogEntry object.
 
         Args:
-            line (str): Raw log line to parse
+            line (str): Raw JSON log line to parse
 
         Returns:
             Optional[LogEntry]: Parsed log entry or None if line couldn't be parsed
         """
         try:
-            # Skip empty lines
             if not line.strip():
                 return None
 
-            # Try to match the complete log line pattern
-            match = self.LOG_LINE_PATTERN.match(line)
-            if not match:
-                return None
+            # Parse JSON line
+            log_data = json.loads(line)
 
-            # Extract components
-            timestamp_str = match.group("timestamp")
-            component = match.group("component")
-            level = match.group("level")
-            message = match.group("message")
-
-            # Parse timestamp
-            try:
-                timestamp = datetime.strptime(
-                    timestamp_str.strip(), "%Y-%m-%d %H:%M:%S,%f"
-                )
-            except ValueError:
-                return None
-
-            # Create log entry
-            return LogEntry(
-                timestamp=timestamp,
-                component=component.strip(),
-                level=level.strip(),
-                message=message.strip(),
+            # Convert timestamp string to datetime
+            log_data["timestamp"] = datetime.strptime(
+                log_data["timestamp"], "%Y-%m-%d %H:%M:%S"
             )
-        except Exception:
+
+            # Create log entry from parsed data
+            return LogEntry(**log_data)
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            self.logger.warning(f"Failed to parse log line: {str(e)}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Unexpected error parsing log line: {str(e)}")
             return None
 
-    def process_docker_output(self, docker_result: dict) -> DockerLogSummary:
+    def process_log_file(self, file_path: str) -> LogSummary:
         """
-        Process Docker command output and collect WARNING and ERROR logs.
+        Process a JSONL log file and collect log entries by level.
 
         Args:
-            docker_result (dict): Docker command output containing stdout and stderr
+            file_path (str): Path to the JSONL log file
 
         Returns:
-            DockerLogSummary: Summary of found warnings and errors
+            LogSummary: Summary of found log entries
         """
         # Reset summary
-        self.summary = DockerLogSummary()
+        self.summary = LogSummary()
 
-        def process_lines(lines: str) -> None:
-            if not lines:
-                return
+        try:
+            with open(file_path, "r") as f:
+                for line in f:
+                    entry = self.parse_log_line(line)
+                    if entry:
+                        self._process_entry(entry)
 
-            # Split into lines and reconstruct complete log entries
-            current_lines = []
+            # Sort all entries by timestamp
+            self.summary.info.sort(key=lambda x: x.timestamp)
+            self.summary.warnings.sort(key=lambda x: x.timestamp)
+            self.summary.errors.sort(key=lambda x: x.timestamp)
 
-            for line in lines.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
+            # Set start and end times
+            all_entries = (
+                self.summary.info + self.summary.warnings + self.summary.errors
+            )
+            if all_entries:
+                self.summary.start_time = min(entry.timestamp for entry in all_entries)
+                self.summary.end_time = max(entry.timestamp for entry in all_entries)
 
-                # If this is a new log entry
-                if self.TIMESTAMP_PATTERN.match(line):
-                    # Process previous lines if any
-                    if current_lines:
-                        complete_line = " ".join(current_lines)
-                        entry = self.parse_log_line(complete_line)
-                        if entry:
-                            self._process_entry(entry)
-                    # Start new entry
-                    current_lines = [line]
-                else:
-                    # Continue current entry
-                    current_lines.append(line)
-
-            # Process the last entry if any
-            if current_lines:
-                complete_line = " ".join(current_lines)
-                entry = self.parse_log_line(complete_line)
-                if entry:
-                    self._process_entry(entry)
-
-        # Process stderr first as it's more likely to contain errors
-        process_lines(docker_result.get("stderr", ""))
-
-        # Process stdout
-        process_lines(docker_result.get("stdout", ""))
+        except Exception as e:
+            self.logger.error(f"Error processing log file {file_path}: {str(e)}")
 
         return self.summary
 
     def _process_entry(self, entry: LogEntry) -> None:
         """
         Process a single log entry and add it to the appropriate collection.
-        Checks for duplicates before adding.
 
         Args:
             entry (LogEntry): The log entry to process
         """
+        if entry.levelname == "INFO":
+            self.summary.info.append(entry)
+            self.summary.total_info += 1
+        elif entry.levelname == "WARNING":
+            self.summary.warnings.append(entry)
+            self.summary.total_warnings += 1
+        elif entry.levelname == "ERROR":
+            self.summary.errors.append(entry)
+            self.summary.total_errors += 1
 
-        def is_duplicate(entry: LogEntry, entries: List[LogEntry]) -> bool:
-            """Check if entry is already in the list."""
-            for existing in entries:
-                # Compare timestamps and messages
-                if (
-                    existing.timestamp == entry.timestamp
-                    and existing.component == entry.component
-                    and existing.message == entry.message
-                ):
-                    return True
-            return False
-
-        if "WARNING" in entry.level:
-            if not is_duplicate(entry, self.summary.warnings):
-                self.summary.warnings.append(entry)
-                self.summary.total_warnings += 1
-        elif "ERROR" in entry.level:
-            if not is_duplicate(entry, self.summary.errors):
-                self.summary.errors.append(entry)
-                self.summary.total_errors += 1
-
-    def get_warnings_by_component(self) -> Dict[str, List[LogEntry]]:
+    def get_entries_by_component(self, component: str) -> List[LogEntry]:
         """
-        Group warnings by component.
+        Get all log entries for a specific component/logger name.
+
+        Args:
+            component (str): Component/logger name to filter by
 
         Returns:
-            Dict[str, List[LogEntry]]: Warnings grouped by component
+            List[LogEntry]: List of log entries from the specified component
         """
-        warnings_by_component = {}
-        for warning in self.summary.warnings:
-            if warning.component not in warnings_by_component:
-                warnings_by_component[warning.component] = []
-            warnings_by_component[warning.component].append(warning)
-        return warnings_by_component
+        all_entries = self.summary.info + self.summary.warnings + self.summary.errors
+        return sorted(
+            [entry for entry in all_entries if entry.name == component],
+            key=lambda x: x.timestamp,
+        )
 
-    def get_errors_by_component(self) -> Dict[str, List[LogEntry]]:
+    def get_entries_by_level(self, level: str) -> List[LogEntry]:
         """
-        Group errors by component.
+        Get all log entries for a specific log level.
+
+        Args:
+            level (str): Log level to filter by (INFO, WARNING, ERROR)
 
         Returns:
-            Dict[str, List[LogEntry]]: Errors grouped by component
+            List[LogEntry]: List of log entries with the specified level
         """
-        errors_by_component = {}
-        for error in self.summary.errors:
-            if error.component not in errors_by_component:
-                errors_by_component[error.component] = []
-            errors_by_component[error.component].append(error)
-        return errors_by_component
+        if level == "INFO":
+            return self.summary.info
+        elif level == "WARNING":
+            return self.summary.warnings
+        elif level == "ERROR":
+            return self.summary.errors
+        return []
 
     def has_critical_errors(self) -> bool:
         """
-        Check if there are any critical errors in the logs.
+        Check if there are any error level entries in the logs.
 
         Returns:
-            bool: True if critical errors are found
+            bool: True if error entries are found
         """
         return self.summary.total_errors > 0

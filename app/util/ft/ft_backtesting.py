@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from app.util.ft.verification.log_parser import DockerLogSummary
+from app.util.ft.verification.log_parser import LogSummary
 from app.util.logger import setup_logger
 from .ft_base import FTBase
 from app.util.exceptions import PickleableDockerException
@@ -63,7 +63,7 @@ class FTBacktesting(FTBase):
             raise ValueError("Date range cannot be empty")
 
         try:
-            log_summary: DockerLogSummary = self.run_docker_command(
+            log_summary: LogSummary = self.run_docker_command(
                 "freqtrade",
                 [
                     "backtesting",
@@ -86,10 +86,10 @@ class FTBacktesting(FTBase):
                 )
                 for warning in log_summary.warnings:
                     self.logger.warning(
-                        f"{warning.component}: {warning.message}",
+                        f"{warning.name}: {warning.message}",
                         extra={
                             "data": {
-                                "component": warning.component,
+                                "name": warning.name,
                                 "timestamp": warning.timestamp,
                             }
                         },

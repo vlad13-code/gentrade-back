@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from app.util.ft.verification.log_parser import DockerLogSummary
+from app.util.ft.verification.log_parser import LogSummary
 from app.util.logger import setup_logger
 
 from .exceptions import (
@@ -30,12 +30,12 @@ class DataDownloadVerifier:
         self.base_dir = Path(base_dir)
         self.logger = setup_logger(__name__)
 
-    def verify_docker_execution(self, docker_result: DockerLogSummary) -> None:
+    def verify_docker_execution(self, docker_result: LogSummary) -> None:
         """
         Verify Docker command execution success.
 
         Args:
-            docker_result (DockerLogSummary): Docker command execution result
+            docker_result (LogSummary): Docker command execution result
 
         Raises:
             DockerExecutionError: If verification fails
@@ -43,14 +43,6 @@ class DataDownloadVerifier:
         if docker_result.errors:
             error_details = {
                 "total_errors": docker_result.total_errors,
-                "errors": [
-                    {
-                        "component": error.component,
-                        "message": error.message,
-                        "timestamp": error.timestamp.isoformat(),
-                    }
-                    for error in docker_result.errors
-                ],
             }
             self.logger.debug(
                 "Docker execution verification failed",
@@ -250,7 +242,7 @@ class DataDownloadVerifier:
 
     def verify_download(
         self,
-        docker_result: Optional[DockerLogSummary] = None,
+        docker_result: Optional[LogSummary] = None,
         expected_files: List[str] = [],
         date_range: Optional[str] = None,
         timeframes: Optional[List[str]] = None,
@@ -259,7 +251,7 @@ class DataDownloadVerifier:
         Perform complete verification of data download.
 
         Args:
-            docker_result (dict): Docker command execution result
+            docker_result (LogSummary): Docker command execution result
             expected_files (List[str]): List of expected file paths
             date_range (Optional[str], optional): Date range to verify. Defaults to None.
             timeframes (Optional[List[str]], optional): List of timeframes to verify.
