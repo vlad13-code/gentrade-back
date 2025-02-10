@@ -5,11 +5,13 @@ from app.celery.celery_rmq_connector import CeleryRMQConnector
 from app.config import settings
 import traceback
 import logging
+from app.tasks.base import LoggedTask
+import time
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncTask(celery.Task):
+class AsyncTask(LoggedTask):
     async def apply_async(self, *args, **kwargs):
         """Asynchronously send a task to the queue"""
         app: AsyncCelery = self._get_app()
@@ -17,9 +19,12 @@ class AsyncTask(celery.Task):
 
     async def async_run(self, *args, **kwargs):
         """Run the task asynchronously"""
+        start_time = time.time()
+        self.log_task_start(args, kwargs)
         try:
             result = await self.run(*args, **kwargs)
             self.update_state(state=celery.states.SUCCESS)
+            self.log_task_success(start_time)
             return result
         except Exception as exc:
             self.update_state(
@@ -30,7 +35,7 @@ class AsyncTask(celery.Task):
                     "traceback": traceback.format_exc(),
                 },
             )
-            # Re-raise the exception to let Celery handle it
+            self.log_task_failure(start_time, exc)
             raise
 
     def __call__(self, *args, **kwargs):

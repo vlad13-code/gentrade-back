@@ -134,6 +134,14 @@ def set_correlation_id(new_id: Optional[str] = None) -> str:
     return new_correlation_id
 
 
+def get_correlation_id() -> str:
+    """Get the current correlation ID from the context."""
+    try:
+        return correlation_id.get()
+    except LookupError:
+        return ""
+
+
 def set_user_id(new_id: str) -> None:
     """Set the user ID in the context."""
     user_id.set(new_id)

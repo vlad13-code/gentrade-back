@@ -8,7 +8,12 @@ from app.db.models.users import UsersORM
 from app.db.models.backtests import BacktestsORM
 from app.schemas.schema_backtests import BacktestSchema, BacktestSchemaAdd
 from app.tasks.backtests import run_backtest_task
-from app.util.logger import setup_logger, set_backtest_id, set_strategy_id
+from app.util.logger import (
+    setup_logger,
+    set_backtest_id,
+    set_strategy_id,
+    get_correlation_id,
+)
 
 logger = setup_logger("services.backtests")
 
@@ -78,14 +83,18 @@ class BacktestsService:
                 },
             )
 
+            # Get correlation ID from current context
+            correlation_id = get_correlation_id()
+
             # Enqueue Celery task using async pattern
             logger.info("Enqueueing backtest task")
-        await run_backtest_task.apply_async(
-            backtest_id=backtest.id,
-            strategy_id=strategy_id,
-            clerk_id=user.clerk_id,
-            date_range=date_range,
-        )
+            await run_backtest_task.apply_async(
+                backtest_id=backtest.id,
+                strategy_id=strategy_id,
+                clerk_id=user.clerk_id,
+                date_range=date_range,
+                correlation_id=correlation_id,  # Pass correlation ID to task
+            )
 
         logger.info(
             "Backtest creation completed",
