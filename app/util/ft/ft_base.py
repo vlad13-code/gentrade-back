@@ -268,7 +268,7 @@ class FTBase:
                 },
             )
             raise PickleableDockerException(
-                message=str(e),
+                message=f"{log_summary.errors[0].name}: {log_summary.errors[0].message}",
                 original_exception=e,
                 command=command,
                 exit_code=getattr(e, "return_code", -1),

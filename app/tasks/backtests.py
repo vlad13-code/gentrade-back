@@ -99,9 +99,9 @@ async def run_backtest_task(
             }
 
         except Exception as e:
-            logger.error(f"Error running backtest: {e}")
+            logger.error("Error running backtest")
             # Mark backtest as failed
             await uow.backtests.edit_one(backtest_id, {"status": "failed"})
             await uow.commit()
             # Re-raise the exception to be handled by AsyncTask
-            raise
+            raise e

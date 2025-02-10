@@ -5,13 +5,13 @@ from app.celery.celery_rmq_connector import CeleryRMQConnector
 from app.config import settings
 import traceback
 import logging
-from app.tasks.base import LoggedTask
+from app.tasks.base import BaseTask
 import time
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncTask(LoggedTask):
+class AsyncTask(BaseTask):
     async def apply_async(self, *args, **kwargs):
         """Asynchronously send a task to the queue"""
         app: AsyncCelery = self._get_app()
