@@ -23,6 +23,20 @@ class CeleryRMQConnector:
     async def send_task(self, task_name, queue_name, task_kwargs, expires=None):
         task_id = uuid4().hex
         channel = await self._get_connection_channel()
+
+        headers = {
+            "argsrepr": "[]",
+            "kwargsrepr": str(task_kwargs),
+            "group": None,
+            "origin": "gen@blablabla",
+            "retries": 0,
+            "expires": expires,
+            "id": task_id,
+            "root_id": task_id,
+            "task": task_name,
+            "lang": "py",
+        }
+
         await channel.default_exchange.publish(
             aio_pika.Message(
                 body=json.dumps(
@@ -46,18 +60,7 @@ class CeleryRMQConnector:
                 content_encoding="utf-8",
                 message_id=None,
                 expiration=expires or 60 * 60,
-                headers={
-                    "argsrepr": "[]",
-                    "kwargsrepr": str(task_kwargs),
-                    "group": None,
-                    "origin": "gen@blablabla",
-                    "retries": 0,
-                    "expires": expires,
-                    "id": task_id,
-                    "root_id": task_id,
-                    "task": task_name,
-                    "lang": "py",
-                },
+                headers=headers,
             ),
             routing_key=queue_name,
         )

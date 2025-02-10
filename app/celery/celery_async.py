@@ -19,6 +19,14 @@ class AsyncTask(LoggedTask):
 
     async def async_run(self, *args, **kwargs):
         """Run the task asynchronously"""
+
+        # Set correlation_id from kwargs if present
+        correlation_id = kwargs.get("correlation_id")
+        if correlation_id:
+            from app.util.logger import set_correlation_id
+
+            set_correlation_id(correlation_id)
+
         start_time = time.time()
         self.log_task_start(args, kwargs)
         try:
@@ -40,6 +48,13 @@ class AsyncTask(LoggedTask):
 
     def __call__(self, *args, **kwargs):
         """Override to run async tasks in the event loop"""
+        # Set correlation_id from kwargs if present
+        correlation_id = kwargs.get("correlation_id")
+        if correlation_id:
+            from app.util.logger import set_correlation_id
+
+            set_correlation_id(correlation_id)
+
         return self._get_app().loop.run_until_complete(self.async_run(*args, **kwargs))
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):

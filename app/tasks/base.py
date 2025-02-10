@@ -1,8 +1,9 @@
 from celery import Task
 import time
 from typing import Any
+from contextvars import copy_context
 
-from app.util.logger import setup_logger, set_correlation_id
+from app.util.logger import setup_logger, set_correlation_id, correlation_id
 
 logger = setup_logger("tasks.base")
 
@@ -12,15 +13,32 @@ class LoggedTask(Task):
 
     def apply_async(self, *args: Any, **kwargs: Any) -> Any:
         """Override to ensure correlation ID is passed to the task."""
-        # Get the correlation ID from the current context, if any
-        correlation_id = kwargs.pop("correlation_id", None)
-        if correlation_id:
+        # Get the current context
+        current_context = copy_context()
+
+        # Capture correlation_id from context, or kwargs
+        try:
+            correlation_id_value = correlation_id.get()
+        except LookupError:
+            correlation_id_value = kwargs.pop("correlation_id", None)
+
+        if correlation_id_value:
             # Store correlation ID in task headers
             headers = kwargs.get("headers", {})
-            headers["correlation_id"] = correlation_id
+            headers["correlation_id"] = correlation_id_value
             kwargs["headers"] = headers
 
-        return super().apply_async(*args, **kwargs)
+        # Wrap the original apply_async call within the captured context
+        def run_with_context(*args, **kwargs):
+            for key, value in current_context.items():
+                try:
+                    key.set(value)
+                except LookupError:
+                    pass  # Key may be already set in child context
+            return super(LoggedTask, self).apply_async(*args, **kwargs)
+
+        result = run_with_context(*args, **kwargs)
+        return result
 
     def log_task_start(self, args: Any, kwargs: Any) -> None:
         """Log the start of a task."""

@@ -37,7 +37,6 @@ class ChatInputType(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    logger.info("Starting application")
     connection_kwargs = {
         "autocommit": True,
         "prepare_threshold": 0,
@@ -55,9 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             checkpointer = AsyncPostgresSaver(pool)
             graph_main.checkpointer = checkpointer
             app.state.agent = graph_main
-            logger.info("Application startup complete")
             yield
-            logger.info("Shutting down application")
 
 
 app = FastAPI(
@@ -138,5 +135,3 @@ app.openapi_tags.append(
         "description": "Chat history endpoints. Designed for using on frontend.",
     }
 )
-
-logger.info("Application routes configured")
