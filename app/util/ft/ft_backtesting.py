@@ -36,7 +36,9 @@ class FTBacktesting(FTBase):
             ValueError: If input parameters are invalid.
         """
         output_filename = f"backtest_{uuid.uuid4()}.json"
-        result_path = os.path.join(self.user_dir, "backtest_results", output_filename)
+        result_path = os.path.join(
+            self.user_dir, "user_data", "backtest_results", output_filename
+        )
 
         self.logger.info(
             "Starting backtest",

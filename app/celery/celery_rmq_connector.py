@@ -29,7 +29,7 @@ class CeleryRMQConnector:
             "kwargsrepr": str(task_kwargs),
             "group": None,
             "origin": "gen@blablabla",
-            "retries": 0,
+            "retries": 3,
             "expires": expires,
             "id": task_id,
             "root_id": task_id,
