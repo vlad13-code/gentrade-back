@@ -28,6 +28,9 @@ class FTBase:
         self.user_dir = self._get_user_data_directory()
         self.strategies_dir = self._get_strategies_dir()
         self.logs_dir = self._get_logs_dir()
+        self.local_backtest_results_folder = self._get_backtest_results_dir()
+
+        self.docker_backtest_results_folder = "/freqtrade/user_data/backtest_results"
 
         self.docker_compose_path = os.path.join(self.user_dir, "docker-compose.yml")
 
@@ -86,6 +89,15 @@ class FTBase:
             str: The full path to the user's logs directory.
         """
         return os.path.join(self.user_dir, "user_data", "logs")
+
+    def _get_backtest_results_dir(self) -> str:
+        """
+        Constructs the full path to the user's backtest results directory.
+
+        Returns:
+            str: The full path to the user's backtest results directory.
+        """
+        return os.path.join(self.user_dir, "user_data", "backtest_results")
 
     def _create_from_template(
         self, template_name: str, target_path: str, replacements: dict = None

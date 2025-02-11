@@ -47,9 +47,9 @@ class LogSummary(BaseModel):
 class JsonlLogParser:
     """Parser for Freqtrade JSONL log files."""
 
-    def __init__(self):
+    def __init__(self, summary: LogSummary = None):
         """Initialize the parser."""
-        self.summary = LogSummary()
+        self.summary = summary or LogSummary()
         self.logger = setup_logger(__name__)
 
     def parse_log_line(self, line: str) -> Optional[LogEntry]:

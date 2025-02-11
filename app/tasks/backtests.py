@@ -52,7 +52,7 @@ async def run_backtest_task(
             await uow.backtests.edit_one(backtest_id, {"status": "downloading_data"})
             await uow.commit()
 
-            # Download market data
+            # Download and verify market data
             ft_market_data = FTMarketData(clerk_id)
             ft_user_config = FTUserConfig(clerk_id).read_config()
             download_result: VerificationResult = ft_market_data.download(
@@ -80,14 +80,19 @@ async def run_backtest_task(
 
             # Run freqtrade backtest
             ft_backtesting = FTBacktesting(clerk_id)
-            result_file_path = ft_backtesting.run_backtest(
-                strategy_class_name=strategy.file.replace(".py", ""),
+            backtest_results = ft_backtesting.run_backtest(
+                strategy_file=strategy.file,
                 date_range=date_range,
             )
+            ft_backtesting.cleanup_results()
 
-            # Update backtest with success
+            # Update backtest with success and parsed results
             await uow.backtests.edit_one(
-                backtest_id, {"file": result_file_path, "status": "finished"}
+                backtest_id,
+                {
+                    "status": "finished",
+                    "results": backtest_results,
+                },
             )
             await uow.commit()
 
@@ -95,7 +100,6 @@ async def run_backtest_task(
                 "state": "success",
                 "backtest_id": backtest_id,
                 "strategy_id": strategy_id,
-                "result_file": result_file_path,
             }
 
         except Exception as e:
