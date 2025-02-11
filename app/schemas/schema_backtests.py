@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional, Dict, Any
 
 
 class BacktestStartSchema(BaseModel):
@@ -15,6 +16,7 @@ class BacktestSchemaAdd(BaseModel):
     strategy_id: int
     date_range: str
     status: str
+    results: Optional[Dict[str, Any]] = None
 
 
 class BacktestSchema(BacktestSchemaAdd):
