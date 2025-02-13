@@ -3,9 +3,9 @@ from typing import Callable, TypeVar, ParamSpec
 from fastapi import HTTPException, status
 
 from app.db.models.users import UsersORM
-from app.db.services.service_users import UsersService
 from app.db.utils.unitofwork import UnitOfWork
 from app.schemas.schema_users import UserSchemaAuth
+from app.db.utils.user_ops import get_user_by_clerk_id
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -45,9 +45,7 @@ def require_user(func: Callable[P, R]) -> Callable[P, R]:
 
         async with uow:
             # Get authenticated user
-            user: UsersORM = await UsersService()._get_user_by_clerk_id(
-                uow, user_auth.clerk_id
-            )
+            user: UsersORM = await get_user_by_clerk_id(uow, user_auth.clerk_id)
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
