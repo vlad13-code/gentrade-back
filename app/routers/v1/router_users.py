@@ -3,9 +3,11 @@ from fastapi import APIRouter, Response, status
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 
-from app.dependencies import UOWDep
+from app.dependencies import UOWDep, UserAuthDep
 from app.schemas.schema_users import UserSchemaAdd
+from app.schemas.schema_user_settings import UserSettingsSchema
 from app.db.services.service_users import UsersService
+from app.db.services.service_user_settings import UserSettingsService
 
 router = APIRouter(
     prefix="/users",
@@ -43,3 +45,23 @@ async def add_user(user: UserSchemaAdd, uow: UOWDep, response: Response):
 
     response.status_code = status.HTTP_201_CREATED
     return UserAdded(user_id=user_id)
+
+
+@router.get("/settings", response_model=UserSettingsSchema)
+async def get_user_settings(
+    uow: UOWDep,
+    user: UserAuthDep,
+) -> UserSettingsSchema:
+    """Get the current user's Freqtrade settings."""
+    settings = await UserSettingsService().get_user_settings(uow, user)
+    return settings
+
+
+@router.patch("/settings", response_model=UserSettingsSchema)
+async def update_user_settings(
+    settings_update: UserSettingsSchema,
+    uow: UOWDep,
+    user: UserAuthDep,
+) -> UserSettingsSchema:
+    """Update the current user's Freqtrade settings."""
+    return await UserSettingsService().update_user_settings(uow, user, settings_update)

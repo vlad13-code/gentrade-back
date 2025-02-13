@@ -21,6 +21,12 @@ class FTUserConfig(FTBase):
         self.ensure_user_dir_exists()
         self.logger = setup_logger(__name__)
 
+    def config_exists(self) -> bool:
+        return os.path.exists(self.config_path)
+
+    def get_default_config(self) -> FreqtradeConfig:
+        return FreqtradeConfig()
+
     def read_config(self) -> FreqtradeConfig:
         """
         Read and parse the user's FreqTrade configuration file.
@@ -39,7 +45,7 @@ class FTUserConfig(FTBase):
             extra={"user_id": self.user_id, "config_path": self.config_path},
         )
 
-        if not os.path.exists(self.config_path):
+        if not self.config_exists():
             self.logger.error(
                 "Configuration file not found",
                 extra={"user_id": self.user_id, "config_path": self.config_path},
@@ -49,7 +55,7 @@ class FTUserConfig(FTBase):
         try:
             with open(self.config_path, "r") as config_file:
                 config_data = json.load(config_file)
-            config = FreqtradeConfig(**config_data)
+            config = FreqtradeConfig.model_validate(config_data)
             self.logger.debug(
                 "Successfully read configuration file",
                 extra={"user_id": self.user_id, "config_path": self.config_path},
@@ -136,7 +142,7 @@ class FTUserConfig(FTBase):
             # Rename temporary file to actual config file (atomic operation)
             os.replace(temp_path, self.config_path)
 
-            self.logger.info(
+            self.logger.debug(
                 "Successfully wrote configuration file",
                 extra={"user_id": self.user_id, "config_path": self.config_path},
             )
@@ -218,7 +224,7 @@ class FTUserConfig(FTBase):
             updated_config = FreqtradeConfig(**current_dict)
             self.write_config(updated_config)
 
-            self.logger.info(
+            self.logger.debug(
                 "Successfully updated configuration",
                 extra={
                     "user_id": self.user_id,
