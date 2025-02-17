@@ -90,6 +90,14 @@ class DisplaySettings(BaseModel):
     )
 
 
+class ExchangeSettings(BaseModel):
+    name: Literal["binance", "bitget", "bybit"] = Field(
+        default="binance", description="Exchange name"
+    )
+    key: str = Field(default="", description="Exchange API key")
+    secret: str = Field(default="", description="Exchange API secret")
+
+
 class UserSettingsSchema(BaseModel):
     trading_mode: Optional[TradingModeSettings] = Field(
         default_factory=TradingModeSettings, description="Trading mode settings"
@@ -110,6 +118,9 @@ class UserSettingsSchema(BaseModel):
     )
     display_settings: Optional[DisplaySettings] = Field(
         default_factory=DisplaySettings, description="Display and simulation settings"
+    )
+    exchange_settings: Optional[ExchangeSettings] = Field(
+        default_factory=ExchangeSettings, description="Exchange settings"
     )
 
     @classmethod
@@ -135,6 +146,11 @@ class UserSettingsSchema(BaseModel):
                 tradable_balance_ratio=config.tradable_balance_ratio,
                 position_adjustment_enabled=config.position_adjustment_enable,
                 minimal_roi={},  # Add ROI mapping if needed
+            ),
+            exchange_settings=ExchangeSettings(
+                name=config.exchange.name,
+                key=config.exchange.key,
+                secret=config.exchange.secret,
             ),
             order_settings=OrderSettings(
                 entry_order_type=(
@@ -198,7 +214,9 @@ class UserSettingsSchema(BaseModel):
 
         # Create exchange configuration
         exchange_config = ExchangeConfig(
-            name="binance",
+            name=self.exchange_settings.name,
+            key=self.exchange_settings.key,
+            secret=self.exchange_settings.secret,
             pair_whitelist=self.pair_config.pair_whitelist if self.pair_config else [],
             pair_blacklist=self.pair_config.pair_blacklist if self.pair_config else [],
         )
