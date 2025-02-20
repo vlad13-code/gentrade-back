@@ -361,18 +361,11 @@ class FreqtradeConfig(BaseModel):
     pairlists: List[PairlistConfig] = Field(
         default_factory=list, description="Pairlist configurations"
     )
-    telegram: TelegramConfig = Field(
-        default_factory=TelegramConfig, description="Telegram configuration"
-    )
     webhook: Optional[WebhookConfig] = Field(
         default_factory=WebhookConfig, description="Webhook configuration"
     )
     api_server: Optional[ApiServerConfig] = Field(
         default_factory=ApiServerConfig, description="API server configuration"
-    )
-    external_message_consumer: Optional[ExternalMessageConsumer] = Field(
-        default_factory=ExternalMessageConsumer,
-        description="External message consumer configuration",
     )
     bot_name: str = Field(default="freqtrade", description="Name of the bot")
     initial_state: Literal["running", "stopped"] = Field(
@@ -403,9 +396,6 @@ class FreqtradeConfig(BaseModel):
     )
     reduce_df_footprint: Optional[bool] = Field(
         default=False, description="Reduce dataframe memory usage"
-    )
-    coingecko: Optional[CoingeckoConfig] = Field(
-        default_factory=CoingeckoConfig, description="Coingecko API configuration"
     )
     add_config_files: Optional[List[str]] = Field(
         default_factory=list, description="Additional config files to load"

@@ -35,3 +35,12 @@ class DataDownloadTimeoutError(Exception):
         self.message = message
         self.original_error = original_error
         super().__init__(self.message)
+
+
+class ExchangeAPIError(Exception):
+    """Exception raised when an error occurs while interacting with an exchange API"""
+
+    def __init__(self, message: str, original_error: Exception | None = None):
+        self.message = message
+        self.original_error = original_error
+        super().__init__(self.message)

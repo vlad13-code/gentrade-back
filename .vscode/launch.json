@@ -12,10 +12,10 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Debug Backtest",
+      "name": "Debug Exchange Service",
       "type": "debugpy",
       "request": "launch",
-      "module": "app.util.ft.ft_backtesting",
+      "module": "app.db.services.service_exchanges",
       "console": "integratedTerminal"
     },
     {

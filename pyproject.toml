@@ -48,4 +48,5 @@ dependencies = [
     "pyarrow>=19.0.0",
     "colorlog>=6.9.0",
     "python-json-logger>=3.2.1",
+    "ccxt>=4.4.60",
 ]
