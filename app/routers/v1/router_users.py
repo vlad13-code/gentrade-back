@@ -3,7 +3,12 @@ from fastapi import APIRouter, Response, status
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 
+from app.db.services.service_exchanges import ExchangeService
 from app.dependencies import UOWDep, UserAuthDep
+from app.schemas.schema_exchanges import (
+    MarketType,
+    TradingPairInfo,
+)
 from app.schemas.schema_users import UserSchemaAdd
 from app.schemas.schema_user_settings import UserSettingsSchema
 from app.db.services.service_users import UsersService
@@ -65,3 +70,13 @@ async def update_user_settings(
 ) -> UserSettingsSchema:
     """Update the current user's Freqtrade settings."""
     return await UserSettingsService().update_user_settings(uow, user, settings_update)
+
+
+@router.get("/settings/pairs/{exchange_id}/{market_type}")
+async def get_exchange_pairs(
+    exchange_id: str,
+    market_type: MarketType,
+    user: UserAuthDep,
+) -> list[TradingPairInfo]:
+    """Get the trading pairs for a specific exchange."""
+    return await ExchangeService().get_trading_pairs(exchange_id, market_type)
